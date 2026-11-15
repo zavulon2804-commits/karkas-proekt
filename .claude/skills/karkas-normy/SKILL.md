@@ -15,7 +15,7 @@ description: Нормы, правила оформления и устройст
   - `06-raschet` `calc`, ветер, подбор сечений · `07-specifikaciya-raskroy` спецификация, раскрой, смета · `08-sovety` советы
   - `09-ui-forma-shablony` форма ввода, шаблоны `TEMPLATES`, история, вкладки · `10-3d` three.js
   - `11-svg-osnova` примитивы SVG, размеры, рамка, штамп · `12-listy-plan-fundament-steny` Ф-1, Ф-2, АР-1, КД, мансарда · `13-list-fasady` фасады · `14-listy-krovlya-od` план кровли, КР-1, ОД · `15-listy-eksport-dxf` `makeSheets`, DXF, ZIP · `16-ui-tablicy-raschet` вкладки спецификации, расчёта, базы · `17-baza-znaniy` база знаний · `18-start` запуск
-- Библиотеки с cdnjs: three.js r128 (3D), JSZip 3.10.1 и SheetJS 0.18.5 (подгружаются при экспорте).
+- Библиотеки: three.js 0.170 (3D) — ES-модуль с cdn.jsdelivr.net, подключается в `src/head.html` и кладётся в `window.THREE` (событие `three-ready`); свет в физических единицах (×π); с cdnjs — JSZip 3.10.1 и SheetJS 0.18.5 (подгружаются при экспорте).
 - Единицы: геометрия — **мм**, нагрузки — **кПа (кН/м²)**, погонные — кН/м (= Н/мм), силы — кН.
 - Поток данных: `P` (исходные данные, localStorage `karkas-proekt-v1`) → `build(P)` → модель `M` (стены, проёмы, детали `M.mem`, сваи, помещения `M.rooms`) → `calc(M)` (проверки `C.checks`, ветер `C.H`) → `spec(M,C)` (марки, раскрой, смета) → `advice()` → `makeSheets()` (SVG A3 → DXF).
 - План прямоугольный A×B. Наружные стены: W1 (y=0, фасад), W2 (x=A), W3 (y=B), W4 (x=0). Перегородки `P.walls` (`axis` x|y, `c`, `from`, `to`, `bearing`) получают id I1, I2… Фронтоны G2/G4, стенки мансарды K1/K3.

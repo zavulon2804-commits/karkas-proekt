@@ -4,7 +4,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script type="module">import * as T from "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js";window.THREE=T;window.dispatchEvent(new Event("three-ready"))</script>
 <style>
 /* Layout: инженерный пульт — колонка параметров слева, рабочее поле с вкладками справа; чертежи всегда на белой бумаге */
 :root{
@@ -1711,8 +1711,8 @@ function render3DTab(){
     el.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>{const g=b.dataset.l;layers[g]=!layers[g];b.setAttribute('aria-pressed',layers[g]);if(R3)applyLayers()});
     $('#vReset').onclick=()=>{if(R3){fitCam();draw3()}};
   }
-  if(!window.THREE){$('#vinfo').textContent='3D-библиотека не загрузилась (нет интернета?). Остальные вкладки работают.';return}
-  if(!R3) init3D();
+  if(!window.THREE){$('#vinfo').textContent='3D-библиотека загружается… Если модель не появится — нет интернета; остальные вкладки работают.';return}
+  if(!R3){init3D();if(/^3D-библиотека/.test($('#vinfo').textContent))$('#vinfo').textContent='Нажмите на элемент, чтобы увидеть его марку и размеры.'}
   if(dirty3d){build3D();dirty3d=false}
   resize3();
 }
@@ -1722,9 +1722,9 @@ function init3D(){
   renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
   const scene=new THREE.Scene();
   const camera=new THREE.PerspectiveCamera(40,1,.05,500);
-  scene.add(new THREE.HemisphereLight(0xffffff,0x56605a,.85));
-  const dl=new THREE.DirectionalLight(0xffffff,.65);dl.position.set(-12,20,14);scene.add(dl);
-  const dl2=new THREE.DirectionalLight(0xffffff,.25);dl2.position.set(14,8,-10);scene.add(dl2);
+  scene.add(new THREE.HemisphereLight(0xffffff,0x56605a,.85*Math.PI));
+  const dl=new THREE.DirectionalLight(0xffffff,.65*Math.PI);dl.position.set(-12,20,14);scene.add(dl);
+  const dl2=new THREE.DirectionalLight(0xffffff,.25*Math.PI);dl2.position.set(14,8,-10);scene.add(dl2);
   const root=new THREE.Group();root.rotation.x=-Math.PI/2;root.scale.setScalar(.001);scene.add(root);
   R3={renderer,scene,camera,root,groups:{},cam:{theta:-2.2,phi:1.05,r:22,target:new THREE.Vector3()},geoCache:new Map(),mats:{}};
   const pts=new Map();let last=null,moved=0,pinch=0;
@@ -1795,6 +1795,7 @@ function pick3(e){
   info.innerHTML=`<span class="mk">${esc(m.mark||m.role)}</span> · ${esc(ROLE[m.role])} · ${m.sec.join('×')} мм · L=${fmt(r10(m.L))} мм${m.n>1?` · ${m.n} доски`:''}${m.wall?` · ${esc(M.walls.find(w=>w.id===m.wall)?.name||'')}`:''}`;
 }
 
+window.addEventListener('three-ready',()=>{if(curTab==='3d')renderActive()});
 /* ---------- СВГ-чертежи ---------- */
 const SVG_CSS=`<style>.m{stroke:#111;stroke-width:.5;fill:none}.t{stroke:#111;stroke-width:.18;fill:none}.ax{stroke:#333;stroke-width:.18;stroke-dasharray:8 1.2 1 1.2;fill:none}.hd{stroke:#111;stroke-width:.25;stroke-dasharray:2 1;fill:none}.w{fill:#F4E6CC;stroke:#111;stroke-width:.25}.w2{fill:#E2C08E;stroke:#111;stroke-width:.25}.w3{fill:#C98B55;stroke:#111;stroke-width:.3}.ctx{fill:#EEEEEE;stroke:#888;stroke-width:.2}.wb{fill:#8AA6E8;stroke:#111;stroke-width:.25}.wl{fill:#EBD9B8;stroke:#111;stroke-width:.4}.wlp{fill:#F3EBDA;stroke:#111;stroke-width:.3}.op{fill:#fff;stroke:#111;stroke-width:.25}.pile{fill:#fff;stroke:#111;stroke-width:.35}.fr{fill:none;stroke:#111;stroke-width:.6}.blk{fill:#111;stroke:none}.gnd{stroke:#111;stroke-width:.6}text{font-family:"Arial Narrow","Liberation Sans Narrow",Arial,Helvetica,sans-serif;font-style:italic;fill:#111}.b{font-weight:bold}.wt{fill:#fff;stroke:none}</style>`;
 const f2=v=>Math.round(v*100)/100;

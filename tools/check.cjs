@@ -6,10 +6,10 @@
 // Выход с кодом 1, если есть ошибки JS или отличия от эталона.
 const {chromium}=require('playwright');const fs=require('fs'),path=require('path'),cp=require('child_process');
 const ROOT=path.resolve(__dirname,'..'),arg=k=>{const a=process.argv.find(x=>x===k||x.startsWith(k+'='));return a?(a.split('=')[1]??true):null};
-function three(){const c=[path.join(ROOT,'node_modules/three/build/three.min.js'),path.join(ROOT,'tools/.cache/three.min.js')].find(fs.existsSync);if(c)return c;
-  const d=path.join(ROOT,'tools/.cache');fs.mkdirSync(d,{recursive:true});cp.execSync('npm pack three@0.128.0 --silent && tar -xzf three-0.128.0.tgz package/build/three.min.js && mv package/build/three.min.js . && rm -rf package three-0.128.0.tgz',{cwd:d,stdio:'ignore'});return path.join(d,'three.min.js')}
+function three(){const c=[path.join(ROOT,'node_modules/three/build/three.module.min.js'),path.join(ROOT,'tools/.cache/three-0.170.module.min.js')].find(fs.existsSync);if(c)return c;
+  const d=path.join(ROOT,'tools/.cache');fs.mkdirSync(d,{recursive:true});cp.execSync('npm pack three@0.170.0 --silent && tar -xzf three-0.170.0.tgz package/build/three.module.min.js && mv package/build/three.module.min.js three-0.170.module.min.js && rm -rf package three-0.170.0.tgz',{cwd:d,stdio:'ignore'});return path.join(d,'three-0.170.module.min.js')}
 (async()=>{const b=await chromium.launch({args:['--use-gl=swiftshader','--enable-unsafe-swiftshader']}),p=await b.newPage({viewport:{width:1500,height:950}});
-  const T=fs.readFileSync(three());await p.route('**/three.min.js',r=>r.fulfill({body:T,contentType:'application/javascript'}));
+  const T=fs.readFileSync(three());await p.route('**/three.module.min.js',r=>r.fulfill({body:T,contentType:'application/javascript'}));
   const errs=[];p.on('pageerror',e=>errs.push('JS: '+e.message));p.on('console',m=>{if(m.type()==='error'&&!/ERR_TUNNEL|Failed to load|net::/.test(m.text()))errs.push('console: '+m.text())});
   await p.goto('file://'+path.join(ROOT,'index.html'));await p.waitForTimeout(1200);
   const keys=await p.evaluate(()=>Object.keys(TEMPLATES)),dxf=!!arg('--dxf'),res={};

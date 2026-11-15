@@ -4,7 +4,7 @@
 set -e
 cd "$(dirname "$0")/.."
 node build.mjs
-node tools/check.cjs || { echo "Проверка не прошла — публикация остановлена. Если отличия ожидаемые: node tools/check.cjs --update"; exit 1; }
+node tools/check.cjs && node tools/types.cjs || { echo "Проверка не прошла — публикация остановлена. Если отличия ожидаемые: node tools/check.cjs --update"; exit 1; }
 git add -A
 git commit -q -F - <<MSG
 $1

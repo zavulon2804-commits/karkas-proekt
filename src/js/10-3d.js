@@ -12,8 +12,8 @@ function render3DTab(){
     el.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>{const g=b.dataset.l;layers[g]=!layers[g];b.setAttribute('aria-pressed',layers[g]);if(R3)applyLayers()});
     $('#vReset').onclick=()=>{if(R3){fitCam();draw3()}};
   }
-  if(!window.THREE){$('#vinfo').textContent='3D-библиотека не загрузилась (нет интернета?). Остальные вкладки работают.';return}
-  if(!R3) init3D();
+  if(!window.THREE){$('#vinfo').textContent='3D-библиотека загружается… Если модель не появится — нет интернета; остальные вкладки работают.';return}
+  if(!R3){init3D();if(/^3D-библиотека/.test($('#vinfo').textContent))$('#vinfo').textContent='Нажмите на элемент, чтобы увидеть его марку и размеры.'}
   if(dirty3d){build3D();dirty3d=false}
   resize3();
 }
@@ -23,9 +23,9 @@ function init3D(){
   renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
   const scene=new THREE.Scene();
   const camera=new THREE.PerspectiveCamera(40,1,.05,500);
-  scene.add(new THREE.HemisphereLight(0xffffff,0x56605a,.85));
-  const dl=new THREE.DirectionalLight(0xffffff,.65);dl.position.set(-12,20,14);scene.add(dl);
-  const dl2=new THREE.DirectionalLight(0xffffff,.25);dl2.position.set(14,8,-10);scene.add(dl2);
+  scene.add(new THREE.HemisphereLight(0xffffff,0x56605a,.85*Math.PI));
+  const dl=new THREE.DirectionalLight(0xffffff,.65*Math.PI);dl.position.set(-12,20,14);scene.add(dl);
+  const dl2=new THREE.DirectionalLight(0xffffff,.25*Math.PI);dl2.position.set(14,8,-10);scene.add(dl2);
   const root=new THREE.Group();root.rotation.x=-Math.PI/2;root.scale.setScalar(.001);scene.add(root);
   R3={renderer,scene,camera,root,groups:{},cam:{theta:-2.2,phi:1.05,r:22,target:new THREE.Vector3()},geoCache:new Map(),mats:{}};
   const pts=new Map();let last=null,moved=0,pinch=0;
@@ -96,3 +96,4 @@ function pick3(e){
   info.innerHTML=`<span class="mk">${esc(m.mark||m.role)}</span> · ${esc(ROLE[m.role])} · ${m.sec.join('×')} мм · L=${fmt(r10(m.L))} мм${m.n>1?` · ${m.n} доски`:''}${m.wall?` · ${esc(M.walls.find(w=>w.id===m.wall)?.name||'')}`:''}`;
 }
 
+window.addEventListener('three-ready',()=>{if(curTab==='3d')renderActive()});

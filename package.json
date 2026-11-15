@@ -1,0 +1,15 @@
+{
+  "name": "karkas-proekt",
+  "private": true,
+  "description": "САПР каркасного дома на сваях",
+  "scripts": {
+    "build": "node build.mjs",
+    "check": "node build.mjs && node tools/check.cjs",
+    "types": "tsc -p ."
+  },
+  "devDependencies": {
+    "@types/three": "^0.170.0",
+    "three": "^0.170.0",
+    "typescript": "^5.6.3"
+  }
+}
