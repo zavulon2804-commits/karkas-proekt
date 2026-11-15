@@ -222,14 +222,14 @@ function build(P,OPT={}){
   const rRow=findRow(br,hr),maxStock=rRow?Math.max(...parseStocks(rRow.lens||'6000')):6000,fill=gable&&(P.eaveFilly==='yes'||(P.eaveFilly!=='no'&&(ov>=600||Lraf>maxStock)));
   const fr=fill?(nearestRow(frameRows(r=>r.b>=40&&r.h>=95&&r.h<=hr),50,150)||{b:br,h:Math.min(hr,150)}):null,fOver=Math.max(600,ov),tail=50;
   M.filly=fill?{b:fr.b,h:fr.h,over:fOver,tail,L:r10((ov+fOver)/cs+fr.h*tn)}:null;
-  const kb=gable&&!lap&&!M.purlin?br:0;
+  const kb=gable&&!lap&&!(P.rafterSys==='purlin'&&!M.mans)?br:0;
   slopes.forEach(sl=>{[...xsR.map(x=>[x,'СН']),...barge.map(x=>[x,'СНФ'])].forEach(([x,role])=>{const sv=cutS(sl,x);if(sv>=sl.len-80)return;
     const xx=lap&&sl.dir<0?(x>A/2&&role==='СНФ'?x-br:x+br):x,fl=fill&&role==='СН'&&sv===0,s0=fl?(ov-tail)/cs:sv,s1=sl.len+ext-kb/2/cs,yEnd=sl.y1+sl.dir*(ext*cs-kb/2);
     const pc=hr/2*tn;bar('roof',sv>0?'НР':role,[br,hr],1,at(sl,xx,sv>0?s0:s0-pc,hr/2),at(sl,xx,s1+pc,hr/2),sl.n,hr,br,{L:r10(s1-s0+hr*tn),cuts:[sv>0?null:{y:sl.y0+sl.dir*s0*cs},{y:yEnd}]});
     if(fl){const xf=xx+(x>A/2?-1:1)*(br+fr.b)/2;bar('roof','КОБ',[fr.b,fr.h],1,at(sl,xf,0,hr-fr.h/2),at(sl,xf,(ov+fOver)/cs,hr-fr.h/2),sl.n,fr.h,fr.b,{L:M.filly.L,cuts:[{y:sl.y0},null]})}})});
   M.zRidge=gable?zs+B/2*tn+hr/cs:zs+(B+ov)*tn+hr/cs;
   M.purlin=gable&&!M.mans&&P.rafterSys==='purlin';
-  if(M.purlin){const pb=n(P.purB),ph=n(P.purH),qb=n(P.postB),qh=n(P.postH),ps=Math.max(1000,n(P.postS)),zPt=zs+(B/2-pb/2)*tn,zL1=zt+ha+qb;
+  if(M.purlin){const pb=n(P.purB),ph=n(P.purH),qb=n(P.postB),qh=n(P.postH),ps=Math.max(1000,n(P.postS)),seat=P.ridgeJoint==='lap'?Math.min(pb,hr/4/tn):pb/2,zPt=zs+(B/2-pb/2+seat)*tn,zL1=zt+ha+qb;/* верх прогона — по площадке подрезки стропил: в стык — половина ширины, внахлёст — до h/4 по глубине */
     const nn=Math.max(1,Math.ceil((A-2*d)/ps)),xsP=[d/2,...[...Array(nn-1)].map((_,i)=>d+(A-2*d)*(i+1)/nn),A-d/2];
     bar('roof','КП',[pb,ph],1,[-og,B/2,zPt-ph/2],[A+og,B/2,zPt-ph/2],[0,0,1],ph,pb,{splitAt:rel(xsP,-og)});
     xsP.forEach(x=>bar('roof','СТК',[qb,qh],1,[x,B/2,zL1],[x,B/2,zPt-ph],[0,1,0],qh,qb,{}));
@@ -238,7 +238,7 @@ function build(P,OPT={}){
     if(aS>=300)xsP.forEach((x,i)=>[-1,1].forEach(dir=>{const nb=xsP[i+dir];if(nb==null)return;bar('roof','ПДК',[qb,qh],1,[x+dir*qh/2,B/2,zL1],[x+dir*(qh/2+aS),B/2,zPt-ph],[0,1,0],qh,qb,{L:r10(Math.hypot(aS,Lp)+qh)})}));
     let nC=0,cs2=null;if(P.collar){const zc=zL1+Lp*.6,yC=(zc-zr0)/tn,row=findRow(25,150),sc=row?[25,150]:[n(P.braceB),n(P.braceH)];cs2=sc;
       if(yC>d&&yC<B/2-pb)xsR.forEach(x=>{[-1,1].forEach(sd=>bar('roof','СХ',sc,1,[x+sd*(br/2+sc[0]/2),yC,zc],[x+sd*(br/2+sc[0]/2),B-yC,zc],[0,0,1],sc[1],sc[0],{}));nC++})}
-    M.pur={pb,ph,qb,qh,xs:xsP,zPt,Lpost:Lp,notch:pb/2*tn,span,aS,nC,cs2,onWall:M.attSup!=null&&Math.abs(M.attSup-B/2)<=300}}
+    M.pur={pb,ph,qb,qh,xs:xsP,zPt,Lpost:Lp,seat,notch:seat*tn,span,aS,nC,cs2,onWall:M.attSup!=null&&Math.abs(M.attSup-B/2)<=300}}
   if(gable&&!M.purlin&&P.ridgeJoint!=='lap'){const zTop=zs+B/2*tn+hr/cs;bar('roof','КБ',[br,hr],1,[-og,B/2,zTop-hr/2],[A+og,B/2,zTop-hr/2],[0,0,1],hr,br,{splitAt:rel(xsR,-og)})}
   if(M.mans&&M.mansOk){const hc=150,yT=(M.zc+hc/2-zr0-hr/cs)/tn;M.yT=yT;xsR.forEach(x=>bar('mans','РГ',[50,hc],1,[x+br,yT,M.zc+hc/2],[x+br,B-yT,M.zc+hc/2],[0,0,1],hc,50,{}))}
   if(P.strut&&!M.mans&&!M.purlin){(gable?[B/4,3*B/4]:[B/2]).forEach(y=>xsR.forEach(x=>{const hh=zU(y)-zr0;bar('roof','ПК',[br,150],1,[x+br,y,zr0],[x+br,y,zr0+hh],[0,1,0],150,br,{})}))}
@@ -259,8 +259,15 @@ function build(P,OPT={}){
   M.roofArea=slopes.reduce((s,sl)=>s+sl.len*(A+2*og),0)/1e6;
   /* крыши крыльев */
   const zE=zs-ov*tn,offC=hr+(cb?cb[0]:0)+lt[0]+6;
-  const rafter=(px,py,ux,uy,t0,t1,role,n=1)=>{const nn=[-ux*sn,-uy*sn,cs],B0=t=>[px+ux*t,py+uy*t,zE+t*tn],q=(t,o)=>{const b=B0(t);return [b[0]+nn[0]*o,b[1]+nn[1]*o,b[2]+nn[2]*o]};
-    return {nn,q,m:role?bar('roof',role,[br,hr],n,q(t0,hr/2),q(t1,hr/2),nn,hr,br*n,{L:r10((t1-t0)/cs+hr*tn)}):null}};
+  const rafter=(px,py,ux,uy,t0,t1,role,n=1,opt={})=>{const nn=[-ux*sn,-uy*sn,cs],B0=t=>[px+ux*t,py+uy*t,zE+t*tn],q=(t,o)=>{const b=B0(t);return [b[0]+nn[0]*o,b[1]+nn[1]*o,b[2]+nn[2]*o]};
+    if(!role||!opt.cut)return {nn,q,m:role?bar('roof',role,[br,hr],n,q(t0,hr/2),q(t1,hr/2),nn,hr,br*n,{L:r10((t1-t0)/cs+hr*tn)}):null};
+    /* вертикальные запилы: заготовка удлинена на hr/2·sin α, торцы обрезаны плоскостями x или y = const */
+    const k=ux?'x':'y',ki=ux?0:1,dt=hr/2*sn;
+    return {nn,q,m:bar('roof',role,[br,hr],n,q(opt.tail?t0-dt:t0,hr/2),q(t1+dt,hr/2),nn,hr,br*n,{L:r10((t1-t0)/cs+hr*tn),cuts:[opt.tail?{[k]:B0(t0)[ki]}:null,{[k]:B0(t1)[ki]}]})}};
+  /* стропило крыла со свесом: кобылка сбоку (как в основной кровле), стропило обрезано в 50 мм от стены */
+  const wRaf=(p,ux,uy,t0,t1,role,side)=>{const fw=M.filly&&role==='СН'&&t0===0,ts0=fw?ov-M.filly.tail:t0;rafter(p[0],p[1],ux,uy,ts0,t1,role,1,{cut:true,tail:t0===0});
+    if(fw){const f=M.filly,o=(br+f.b)/2,pf=[p[0]+side[0]*o,p[1]+side[1]*o],k=ux?'x':'y',r=rafter(pf[0],pf[1],ux,uy,0,0,null),d2=f.h/2*sn;
+      bar('roof','КОБ',[f.b,f.h],1,r.q(-d2,hr-f.h/2),r.q(ov+f.over,hr-f.h/2),r.nn,f.h,f.b,{L:f.L,cuts:[{[k]:pf[ux?0:1]},null]})}};
   M.roofInfo={eaves:gable?2*(A+2*og):(A+2*og),ridge:gable?A+2*og:0,valleys:0,valleyN:0};
   /* крыши крыльев в системе стороны: a — вдоль стены, r — наружу. Шаг стропил привязан к осям дома (k.o) */
   M.wingRoofs.forEach(r=>{const k=r.k,h=r.half,T=h+ov,zRk=zs+h*tn+hr/cs,G=k.G,Tv=k.T,Nv=k.N,a0=k.off,a1=k.off+k.Wd,ac=(a0+a1)/2,D=k.D,re=D+og,zA0=zE;
@@ -270,7 +277,7 @@ function build(P,OPT={}){
       const c=f.q(T/2,offC);bar('cover',null,null,1,mv(c,rs(0)),mv(c,rEnd),f.nn,10,T/cs,{})};
     let ts;
     if(k.end){ts=grid(br/2,re-br/2,sr,br,k.o);
-      ts.forEach((rr,i)=>{const role=(i===ts.length-1&&og>=150)?'СНФ':'СН',p=G(a0-ov,rr),q=G(a1+ov,rr);rafter(p[0],p[1],Tv[0],Tv[1],0,T,role);rafter(q[0],q[1],-Tv[0],-Tv[1],0,T,role);
+      ts.forEach((rr,i)=>{const role=(i===ts.length-1&&og>=150)?'СНФ':'СН',p=G(a0-ov,rr),q=G(a1+ov,rr),sd=rr<D/2?[Nv[0],Nv[1]]:[-Nv[0],-Nv[1]];wRaf(p,Tv[0],Tv[1],0,T-br/2,role,sd);wRaf(q,-Tv[0],-Tv[1],0,T-br/2,role,sd);
         if(rr>br&&rr<D-br)bar('attic','БП',[ba,ha],1,P3(a0,rr,za),P3(a1,rr,za),[0,0,1],ha,ba,{})});
       bar('roof','КБ',[br,hr],1,P3(ac,0,zRk-hr/2),P3(ac,re,zRk-hr/2),[0,0,1],hr,br,{splitAt:rel(ts,0)});
       slope(a0-ov,1,()=>0,re);slope(a1+ov,-1,()=>0,re);
@@ -279,7 +286,7 @@ function build(P,OPT={}){
       M.roofArea+=2*T/cs*re/1e6;M.roofInfo.eaves+=2*re;M.roofInfo.ridge+=re;r.ridgeZ=zRk}
     else{ts=grid(-h+br,re-br/2,sr,br,k.o);
       ts.forEach((rr,i)=>{const t0=Math.max(0,ov-rr);if(t0>T-80)return;const role=t0>0?'НР':(i===ts.length-1&&og>=150)?'СНФ':'СН',p=G(a0-ov,rr),q=G(a1+ov,rr);
-        rafter(p[0],p[1],Tv[0],Tv[1],t0,T,role);rafter(q[0],q[1],-Tv[0],-Tv[1],t0,T,role);
+        const sd=rr<D/2?[Nv[0],Nv[1]]:[-Nv[0],-Nv[1]];wRaf(p,Tv[0],Tv[1],t0,T-br/2,role,sd);wRaf(q,-Tv[0],-Tv[1],t0,T-br/2,role,sd);
         if(rr>ba&&rr<D-ba)bar('attic','БП',[ba,ha],1,P3(a0,rr,za),P3(a1,rr,za),[0,0,1],ha,ba,{})});
       bar('roof','КБ',[br,hr],1,P3(ac,-h,zRk-hr/2),P3(ac,re,zRk-hr/2),[0,0,1],hr,br,{splitAt:rel(ts,-h)});
       const zAp=zs+h*tn;r.valleys=[];[a0-ov,a1+ov].forEach(ae=>{const p0=P3(ac,-h,zAp+hr/2),p1=P3(ae,ov,zE+hr/2),L=dist3(p0,p1);bar('roof','ЕН',[br,hr],2,p0,p1,[0,0,1],hr,2*br,{L:r10(L+hr)});M.roofInfo.valleys+=L;M.roofInfo.valleyN++;r.valleys.push([G(ac,-h),G(ae,ov)])});

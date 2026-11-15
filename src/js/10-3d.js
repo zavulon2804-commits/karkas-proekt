@@ -49,7 +49,7 @@ function init3D(){
 }
 /* брусок с торцами, запиленными вертикальной плоскостью y = const (конёк, свес): 4 продольных ребра обрезаются плоскостями */
 function cutGeo(m,x,y,z,p0,p1){const hs=m.sy/2,hw=m.sz/2,C=[];[[-1,-1],[1,-1],[1,1],[-1,1]].forEach(([a,b])=>{const o=y.clone().multiplyScalar(a*hs).add(z.clone().multiplyScalar(b*hw)),A=p0.clone().add(o),B=p1.clone().add(o),
-    end=(P0,P1,c,dflt)=>{if(!c||Math.abs(P1.y-P0.y)<1e-6)return dflt;const t=(c.y-P0.y)/(P1.y-P0.y);return P0.clone().lerp(P1,t)};C.push([end(A,B,m.cuts[0],A),end(A,B,m.cuts[1],B)])});
+    end=(P0,P1,c,dflt)=>{if(!c)return dflt;const k=c.x!=null?'x':'y';if(Math.abs(P1[k]-P0[k])<1e-6)return dflt;const t=(c[k]-P0[k])/(P1[k]-P0[k]);return P0.clone().lerp(P1,t)};C.push([end(A,B,m.cuts[0],A),end(A,B,m.cuts[1],B)])});
   const v=i=>C[i%4],q=[];const quad=(a,b,c,d)=>q.push(a,b,c,a,c,d);
   for(let i=0;i<4;i++)quad(v(i)[0],v(i+1)[0],v(i+1)[1],v(i)[1]);quad(C[0][0],C[3][0],C[2][0],C[1][0]);quad(C[0][1],C[1][1],C[2][1],C[3][1]);
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(q.flatMap(p=>[p.x,p.y,p.z]),3));g.computeVertexNormals();return g}
