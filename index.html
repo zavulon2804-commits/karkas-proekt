@@ -445,6 +445,7 @@ const DEF={
     {wall:'I2',type:'door',x:800,w:800,h:2100,sill:0}
   ],
   rooms:[],
+  blocks:[],
   walls:[
     {axis:'x',c:3500,from:0,to:9000,bearing:true},
     {axis:'y',c:4500,from:3550,to:7000,bearing:false}
@@ -455,7 +456,7 @@ function loadP(){try{const s=localStorage.getItem(LS_KEY);if(s){const o=JSON.par
 function normalize(o){const p=Object.assign(clone(DEF),o);
   if(!o.lumber)p.lumber='edged';if(!Array.isArray(o.db)||!o.db.length)p.db=defaultDB();
   if(!o.beamType){if(+o.beamPly>1){p.beamType='pack';p.packB=R(+o.beamB/+o.beamPly);p.packH=+o.beamH}else{p.beamType='brus';p.beamPly=3}}
-  if(!o.sheathMat)p.sheathMat=+o.wallOsb===12?'osb12':'osb9';p.prices=Object.assign(clone(DEF.prices),o.prices||{});if(!Array.isArray(p.openings))p.openings=[];if(!Array.isArray(p.walls))p.walls=[];if(!Array.isArray(p.rooms))p.rooms=[];return p}
+  if(!o.sheathMat)p.sheathMat=+o.wallOsb===12?'osb12':'osb9';p.prices=Object.assign(clone(DEF.prices),o.prices||{});if(!Array.isArray(p.openings))p.openings=[];if(!Array.isArray(p.walls))p.walls=[];if(!Array.isArray(p.rooms))p.rooms=[];if(!Array.isArray(p.blocks))p.blocks=[];return p}
 function saveP(){try{localStorage.setItem(LS_KEY,JSON.stringify(P))}catch(e){}}
 let P=loadP();
 
@@ -632,6 +633,20 @@ function build(P,OPT={}){
   M.walls.push(mkW('W2','Стена 2',A-d/2,d,0,1,B-2*d,-d,true,d,ss,false));
   M.walls.push(mkW('W3','Стена 3',0,B-d/2,1,0,A,0,true,d,ss,true));
   M.walls.push(mkW('W4','Стена 4',d/2,d,0,1,B-2*d,-d,true,d,ss,false));
+  /* крылья (Г- и Т-образный план): прямоугольный блок примыкает к стене 2 или 3 основного дома.
+     Стена основного дома на стыке остаётся — она становится внутренней несущей стеной. */
+  M.wings=[];M.AX=A;M.BY=B;
+  (P.blocks||[]).forEach((bk,i)=>{const side=bk.side==='W3'?'W3':'W2',off=n(bk.off),Wd=n(bk.w),D=n(bk.depth),Ls=side==='W2'?B:A,nm='крыло '+(i+1),id0=5+3*i,ids=[0,1,2].map(k=>'W'+(id0+k));
+    if(!(Wd>=2000&&D>=1500&&off>=0&&off+Wd<=Ls+1)){M.errs.push({wall:'K'+(i+1),msg:`Крыло ${i+1} не построено: ширина должна быть от 2000 мм, вынос от 1500 мм, и крыло должно помещаться вдоль стены ${side.slice(1)} (её длина ${Ls} мм)`});return}
+    let x0,y0,x1,y1,ws,inner;
+    if(side==='W2'){x0=A;x1=A+D;y0=off;y1=off+Wd;
+      ws=[mkW(ids[0],`Стена ${id0} (${nm}, боковая)`,x0,y0+d/2,1,0,D,0,true,d,ss,false),mkW(ids[1],`Стена ${id0+1} (${nm}, торцевая)`,x1-d/2,y0+d,0,1,Wd-2*d,-d,true,d,ss,false),mkW(ids[2],`Стена ${id0+2} (${nm}, боковая)`,x0,y1-d/2,1,0,D,0,true,d,ss,false)];
+      ws[0].inw=[0,1];ws[1].inw=[-1,0];ws[2].inw=[0,-1];inner=[x0,y0+d,x1-d,y1-d]}
+    else{x0=off;x1=off+Wd;y0=B;y1=B+D;
+      ws=[mkW(ids[0],`Стена ${id0} (${nm}, боковая)`,x0+d/2,y0,0,1,D-d,0,true,d,ss,false),mkW(ids[1],`Стена ${id0+1} (${nm}, торцевая)`,x0,y1-d/2,1,0,Wd,0,true,d,ss,false),mkW(ids[2],`Стена ${id0+2} (${nm}, боковая)`,x1-d/2,y0,0,1,D-d,0,true,d,ss,false)];
+      ws[0].inw=[1,0];ws[1].inw=[0,-1];ws[2].inw=[-1,0];inner=[x0+d,y0,x1-d,y1-d]}
+    ws.forEach(w=>{w.wing=i;M.walls.push(w)});M.wings.push({i,side,x0,y0,x1,y1,inner,ids,D,Wd,nm,area:(x1-x0)*(y1-y0)/1e6});M.AX=Math.max(M.AX,x1);M.BY=Math.max(M.BY,y1)});
+  M.extPerim=2*(A+B)+M.wings.reduce((t,k)=>t+2*k.D+k.Wd,0);
   const dp=n(P.partH), ps=Math.max(300,n(P.partS));
   (P.walls||[]).forEach((iw,i)=>{
     const id='I'+(i+1);
@@ -686,7 +701,7 @@ function build(P,OPT={}){
     M.walls.filter(w=>/^W[1-4]$/.test(w.id)).forEach(w=>{const sg=(w.id==='W1'||w.id==='W2')?1:-1,off=sg*(w.d/2+io/2),u0=w.ux?w.d:0,u1=w.ux?w.L-w.d:w.L;
       for(let v=300;v<M.H-M.np*M.t;v+=600)pushLoc(w,{kind:'h',role:'ИО',u0,u1,v0:v-sec[1]/2,v1:v+sec[1]/2,depth:io,off,sec,splitAt:grid(w.b/2,w.L-w.b/2,w.s,w.b,w.origin).map(u=>u-u0).filter(x=>x>1)},'walls')})}
   /* жёсткость стен первого этажа: укосины по СНиП (45–60°) или плитная обшивка */
-  M.rackWalls=M.walls.filter(w=>/^W[1-4]$/.test(w.id));
+  M.rackWalls=M.walls.filter(w=>/^W\d+$/.test(w.id));
   M.rackWalls.forEach(w=>{w.segs=solidSegs(w);w.mode='sheath';
     if(P.bracing==='braces'){const br=braceLayout(w,M);if(br){w.mode='braces';w.braces=br}else{w.fallback=true}}
     if(w.mode==='braces'){const bt=n(P.braceB),bh=n(P.braceH),off=w.d/2-bt/2;
@@ -747,11 +762,13 @@ const ROOM_KIND={living:'жилое',aux:'подсобное',tech:'технич
 function detectRooms(M,P){
   const d=M.d,A=M.A,B=M.B,obs=[];
   M.walls.filter(w=>!w.ext&&w.zb==null).forEach(w=>{const x0=w.x0-(w.uy?w.d/2:0),y0=w.y0-(w.ux?w.d/2:0),x1=w.ux?w.x0+w.L:w.x0+w.d/2,y1=w.uy?w.y0+w.L:w.y0+w.d/2;const tol=40;obs.push(w.ux?[x0-tol,y0,x1+tol,y1]:[x0,y0-tol,x1,y1+tol])}); /* допуск на примыкание: торец перегородки, не доведённый до стены на 40 мм, считается примкнувшим */
+  const rects=[[d,d,A-d,B-d],...(M.wings||[]).map(k=>k.inner)];
   const cut=(lo,hi,vals)=>[...new Set([lo,hi,...vals.filter(v=>v>lo+1&&v<hi-1)].map(v=>Math.round(v)))].sort((a,c)=>a-c);
-  const xs=cut(d,A-d,obs.flatMap(o=>[o[0],o[2]])),ys=cut(d,B-d,obs.flatMap(o=>[o[1],o[3]]));
+  const xs=cut(Math.min(...rects.map(r=>r[0])),Math.max(...rects.map(r=>r[2])),[...obs.flatMap(o=>[o[0],o[2]]),...rects.flatMap(r=>[r[0],r[2]])]),
+        ys=cut(Math.min(...rects.map(r=>r[1])),Math.max(...rects.map(r=>r[3])),[...obs.flatMap(o=>[o[1],o[3]]),...rects.flatMap(r=>[r[1],r[3]])]);
   const nx=xs.length-1,ny=ys.length-1,id=(i,j)=>j*nx+i,par=[...Array(nx*ny).keys()];
   const fnd=a=>{while(par[a]!==a){par[a]=par[par[a]];a=par[a]}return a},uni=(a,c)=>{a=fnd(a);c=fnd(c);if(a!==c)par[c]=a};
-  const free=[];for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){const cx=(xs[i]+xs[i+1])/2,cy=(ys[j]+ys[j+1])/2;free[id(i,j)]=!obs.some(o=>cx>o[0]&&cx<o[2]&&cy>o[1]&&cy<o[3])}
+  const free=[];for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){const cx=(xs[i]+xs[i+1])/2,cy=(ys[j]+ys[j+1])/2;free[id(i,j)]=rects.some(r=>cx>r[0]&&cx<r[2]&&cy>r[1]&&cy<r[3])&&!obs.some(o=>cx>o[0]&&cx<o[2]&&cy>o[1]&&cy<o[3])}
   for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){if(!free[id(i,j)])continue;if(i+1<nx&&free[id(i+1,j)])uni(id(i,j),id(i+1,j));if(j+1<ny&&free[id(i,j+1)])uni(id(i,j),id(i,j+1))}
   const reg=new Map();
   for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){const k=id(i,j);if(!free[k])continue;const r=fnd(k);if(!reg.has(r))reg.set(r,{cells:[],area:0,best:null});const g=reg.get(r),c=[xs[i],ys[j],xs[i+1],ys[j+1]],a=(c[2]-c[0])*(c[3]-c[1]);g.cells.push(c);g.area+=a;if(!g.best||a>g.best.a)g.best={a,c}}
@@ -765,8 +782,8 @@ function detectRooms(M,P){
 }
 function tep(M){
   const rs=M.rooms||[],tot=rs.reduce((s,r)=>s+r.area,0),liv=rs.filter(r=>r.kind==='living').reduce((s,r)=>s+r.area,0);
-  const mans=M.mans&&M.mansOk?M.mansArea:0,build=M.A*M.B/1e6;
-  const hRoof=M.gable?(M.zRidge-M.zr0):(M.Hr||0),vol=build*((M.zt+M.ha-M.H0)/1000)+M.A*M.B*hRoof/2/1e9;
+  const mans=M.mans&&M.mansOk?M.mansArea:0,wA=(M.wings||[]).reduce((t,k)=>t+k.area,0),build=M.A*M.B/1e6+wA;
+  const hRoof=M.gable?(M.zRidge-M.zr0):(M.Hr||0),vol=build*((M.zt+M.ha-M.H0)/1000)+M.A*M.B*hRoof/2/1e9;/* крыша крыльев — следующий этап */
   return {build,tot,liv,mans,total:tot+mans,vol,floors:M.mans&&M.mansOk?'1 + мансарда':'1'}
 }
 
@@ -939,12 +956,12 @@ function calc(M){
 function hCalc(M,l,pc,g){
   const P=M.P,w0k=l.w0*l.k,gf=1.4,above=M.zRidge-M.zt,out=[];
   const cW=1.3; // наветренная + заветренная сторона (СП 20.13330, прил. В)
-  const Fy=w0k*gf*(cW*M.A*M.H/2+.8*(M.A+2*M.og)*above)/1e6, Fx=w0k*gf*cW*(M.B*M.H/2+M.B*above/2)/1e6;
+  const AX=M.AX||M.A,BY=M.BY||M.B,Fy=w0k*gf*(cW*AX*M.H/2+.8*(M.A+2*M.og)*above)/1e6, Fx=w0k*gf*cW*(BY*M.H/2+M.B*above/2)/1e6;
   const hy=((M.A*M.H/2)*(M.z0+.75*M.H)+(M.A*above)*(M.zt+above/3))/((M.A*M.H/2)+(M.A*above))-M.H0;
   const hx=((M.B*M.H/2)*(M.z0+.75*M.H)+(M.B*above/2)*(M.zt+above/3))/((M.B*M.H/2)+(M.B*above/2))-M.H0;
   const walls=M.rackWalls.map(w=>({w,...wallRack(M,w)}));
-  const dir=[['rack_y','Жёсткость стен: ветер на фасад',Fy,['W2','W4'],'стены 2 и 4'],['rack_x','Жёсткость стен: ветер на фронтон',Fx,['W1','W3'],'стены 1 и 3']];
-  dir.forEach(([id,title,F,ids,nm])=>{const ws=walls.filter(x=>ids.includes(x.w.id)),cap=ws.reduce((s,x)=>s+x.cap,0);
+  const wn=f=>M.rackWalls.filter(f).map(w=>w.id.slice(1)).join(', '),dir=[['rack_y','Жёсткость стен: ветер на фасад',Fy,w=>!!w.uy,'стены '+wn(w=>!!w.uy)],['rack_x','Жёсткость стен: ветер на фронтон',Fx,w=>!!w.ux,'стены '+wn(w=>!!w.ux)]];
+  dir.forEach(([id,title,F,ids,nm])=>{const ws=walls.filter(x=>ids(x.w)),cap=ws.reduce((s,x)=>s+x.cap,0);
     ws.forEach(x=>{x.V=cap>0?F*x.cap/cap:F/ws.length;const L=x.w.L/1000,Hm=M.H/1000,gl=(x.w.bearing?g.wallG+g.roofG+g.attG:g.wallG+g.gabG);
       x.T=x.V*Hm/L-.9*gl*L/2;x.anch=Math.max(1,Math.ceil(Math.max(0,x.T)/T_ANCHOR));x.v=x.V/L;x.nail=Math.min(600,Math.max(100,Math.floor(.65/Math.max(x.v,.01)*1000/50)*50))});
     out.push({id,h:true,title,sec:ws.map(x=>x.w.mode==='braces'?'укосины':'обшивка').join(' / '),meta:`ветер ${fmt(F,1)} кН воспринимают ${nm}`,u:cap>0?F/cap:Infinity,ok:cap>0&&F<=cap,
@@ -1084,7 +1101,7 @@ function spec(M,C){
   const extOps=M.ops.filter(o=>o.ok&&M.walls.find(w=>w.id===o.wall)?.ext);
   const opsA=extOps.reduce((s,o)=>s+o.w*o.h,0)/1e6;
   const gabA=M.gable?(B*B/2*M.tn)/1e6:(B*B*M.tn)/1e6+A*M.Hr/1e6;
-  const wallG=2*(A+B)*H/1e6, wallNet=wallG-opsA;
+  const wallG=(M.extPerim||2*(A+B))*H/1e6, wallNet=wallG-opsA;
   const parts=M.walls.filter(w=>!w.ext), partA=parts.reduce((s,w)=>s+w.L*H,0)/1e6-M.ops.filter(o=>o.ok&&!M.walls.find(w=>w.id===o.wall)?.ext).reduce((s,o)=>s+o.w*o.h,0)/1e6;
   const floorA=A*B/1e6, roofA=M.roofArea;
   const insW=wallNet*d/1000*(1-M.b/(+P.studS)), insF=floorA*M.hj/1000*(1-M.bj/M.sj), insA=floorA*M.ha/1000*(1-M.ba/M.sr), insP=Math.max(0,partA)*(+P.partH)/1000*(1-M.b/(+P.partS));
@@ -1132,7 +1149,8 @@ function spec(M,C){
 function advice(M,C,S){
   const P=M.P,l=C.l,out=[];
   const add=(lvl,title,text,patch,pid)=>out.push({lvl,title,text,patch,pid});
-  M.errs.forEach(e=>add('bad',e.msg,'Проверьте координату и границы перегородки во вкладке «Внутренние стены».'));
+  M.errs.forEach(e=>add('bad',e.msg,/^K/.test(e.wall)?'Исправьте размеры в шаге «Крылья дома».':'Проверьте координату и границы перегородки во вкладке «Внутренние стены».'));
+  if(M.wings&&M.wings.length) add('warn','Крылья дома: построены стены','Для крыльев пока построены наружные стены, проёмы, помещения и 3D каркаса. Сваи, ростверк, пол и крыша крыла добавляются следующими шагами — до этого смета и расчёт учитывают только основной дом (кроме стен и ветра). Стена основного дома на стыке остаётся внутренней несущей стеной — в ней можно сделать дверной проём.');
   M.ops.filter(o=>!o.ok).forEach(o=>add('bad',`Проём №${o.i+1} на стене ${o.wall} не построен`,o.msg+'.'));
   C.checks.forEach(c=>{
     if(!c.ok){const p=pickFor(c.id);add('bad',`${c.title} не проходит по расчёту (${R(c.u*100)} %)`,p?`Подходит: ${describePatch(c.id,p)}. Можно также уменьшить шаг или пролёт.`:'Подходящего стандартного сечения не нашлось: уменьшите шаг, пролёт или добавьте опору.',p,c.id)}
@@ -1272,7 +1290,8 @@ const FORM=[
     {hint:'Укосины ставятся под 45–60° на сплошных участках стены, в каждой стене — обоих направлений. Если по СНиП им не хватает места (мешают проёмы), стена автоматически получает плитную обшивку. Фронтоны обшиваются всегда.'}]},
   {id:'ops',t:'5 · Окна и двери',custom:'ops'},
   {id:'iw',t:'6 · Перегородки',custom:'iw'},
-  {id:'rooms',t:'6а · Помещения (АР)',custom:'rooms'},
+  {id:'blocks',t:'6а · Крылья дома (Г- и Т-образный план)',custom:'blocks'},
+  {id:'rooms',t:'6б · Помещения (АР)',custom:'rooms'},
   {id:'found',t:'3 · Фундамент и пол',f:[
     {k:'pile',l:'Свая',type:'sel',opts:opt(PILES),wide:true},
     {k:'pileFd',l:'Несущая способность сваи',u:'кН',min:5,max:300,step:1,show:()=>P.pile==='manual'},
@@ -1338,7 +1357,7 @@ const FORM=[
     {hint:'Цены примерные — впишите свои из прайса поставщика.'}]},
   {id:'file',t:'Файл проекта',custom:'file'}
 ];
-const F_ORDER=['site','house','found','walls','ops','iw','rooms','roof','loads','cutp','prices','file'];FORM.sort((a,c)=>F_ORDER.indexOf(a.id)-F_ORDER.indexOf(c.id));
+const F_ORDER=['site','house','found','walls','ops','iw','blocks','rooms','roof','loads','cutp','prices','file'];FORM.sort((a,c)=>F_ORDER.indexOf(a.id)-F_ORDER.indexOf(c.id));
 const getK=k=>k.split('.').reduce((o,x)=>o?.[x],P);
 const setK=(k,v)=>{const p=k.split('.');let o=P;for(let i=0;i<p.length-1;i++)o=o[p[i]];o[p.at(-1)]=v};
 
@@ -1385,7 +1404,7 @@ function renderSide(){
       if(k==='roof'||k==='mansard'){setTimeout(()=>{renderSide();},0)}
       schedule();
     })});
-  renderOps(); renderIW(); renderRooms(); renderFile(); renderSite();
+  renderOps(); renderIW(); renderBlocks(); renderRooms(); renderFile(); renderSite();
   $('#tplGo').onclick=()=>{const t=TEMPLATES[$('#tplSel').value],keep={tech:P.tech,lumber:P.lumber,site:P.site,snow:P.snow,wind:P.wind,climMode:P.climMode,freeze:P.freeze,freezeAuto:P.freezeAuto,db:P.db};P=normalize(t.f());Object.assign(P,keep);{const T=TECH[P.tech];if(T&&T.def)Object.assign(P,T.def)}mapToDb();const fx=autoFix();renderSide();rebuild();$('#tplMsg').textContent='Загружен шаблон «'+t.n+'»'+(fx.length?'. Сечения подобраны по расчёту: '+fx.join('; '):'')+'. Отменить — кнопкой ↶.'};
   renderSums();
 }
@@ -1397,6 +1416,7 @@ const TEMPLATES={
   t88:{n:'Дом 8×8',f:()=>tpl('Дом 8×8',8000,8000,2800,[{axis:'x',c:4000,from:0,to:8000,bearing:true},{axis:'y',c:4000,from:4050,to:8000,bearing:false}],[W('W1','window',800,1200),W('W1','door',3500,1000),W('W1','window',5800,1200),W('W2','window',1200,1200),W('W2','window',5000,1200),W('W3','window',1200,1200),W('W3','window',5600,1200),W('W4','window',1500,1200),W('W4','window',5000,1200),W('I1','door',1500,900),W('I1','door',5500,900),W('I2','door',1000,800)])},
   t97:{n:'Дом 9×7 (пример)',f:()=>clone(DEF)},
   t88m:{n:'Дом 8×8 с мансардой',f:()=>Object.assign(tpl('Дом 8×8 с мансардой',8000,8000,2700,[{axis:'x',c:4000,from:0,to:8000,bearing:true},{axis:'y',c:4000,from:4050,to:8000,bearing:false}],[W('W1','window',800,1200),W('W1','door',3500,1000),W('W1','window',5800,1200),W('W2','window',1200,1200),W('W2','window',5000,1200),W('W3','window',1200,1200),W('W3','window',5600,1200),W('W4','window',1500,1200),W('W4','window',5000,1200),W('I1','door',1500,900),W('I1','door',5500,900),W('I2','door',1000,800),W('G2','window',3400,1200,1200,800),W('G4','window',3400,1200,1200,800)]),{slope:45,mansard:true,kneeH:1200,mansH:2400})},
+  tg:{n:'Г-образный дом 9×7 + крыло 4×4',f:()=>Object.assign(tpl('Г-образный дом 9×7 + крыло 4×4',9000,7000,2800,[{axis:'x',c:3500,from:0,to:9000,bearing:true},{axis:'y',c:4500,from:3550,to:7000,bearing:false}],[W('W1','window',800,1200),W('W1','door',3900,1000),W('W1','window',6600,1500),W('W2','door',1500,900),W('W3','window',1500,1200),W('W3','window',6000,900,600,1500),W('W4','window',3800,1200),W('W6','window',1200,1200),W('W7','window',1400,1200),W('I1','door',2000,900),W('I1','door',6000,900),W('I2','door',800,800)]),{blocks:[{side:'W2',off:0,w:4000,depth:4000}]})},
   t1210:{n:'Дом 12×10',f:()=>tpl('Дом 12×10',12000,10000,2800,[{axis:'x',c:5000,from:0,to:12000,bearing:true},{axis:'y',c:4000,from:5050,to:10000,bearing:false},{axis:'y',c:8000,from:0,to:4950,bearing:false}],[W('W1','window',1000,1500),W('W1','door',5500,1000),W('W1','window',8500,1500),W('W2','window',2000,1200),W('W2','window',6500,1200),W('W3','window',1500,1200),W('W3','window',5000,1500),W('W3','window',9000,900,600,1500),W('W4','window',2000,1200),W('W4','window',6500,1200),W('I1','door',2500,900),W('I1','door',6500,900),W('I1','door',9500,900),W('I2','door',1500,800),W('I3','door',2000,800)])}
 };
 function renderSums(){
@@ -1414,7 +1434,7 @@ function undoRedo(d){const n=HI+d;if(n<0||n>=HIST.length)return;HI=n;P=normalize
 function updUndo(){const u=$('#undo'),r=$('#redo');if(u)u.disabled=HI<=0;if(r)r.disabled=HI>=HIST.length-1}
 document.addEventListener('keydown',e=>{if(!(e.ctrlKey||e.metaKey))return;const t=e.target.tagName;if(t==='INPUT'||t==='TEXTAREA')return;
   if(e.key.toLowerCase()==='z'&&!e.shiftKey){e.preventDefault();undoRedo(-1)}else if(e.key.toLowerCase()==='y'||(e.key.toLowerCase()==='z'&&e.shiftKey)){e.preventDefault();undoRedo(1)}});
-function wallOptions(){const ex=[['W1','Стена 1 (фасад, y=0)'],['W2','Стена 2 (правая)'],['W3','Стена 3 (задняя)'],['W4','Стена 4 (левая)'],...(P.roof!=='shed'?[['G2','Фронтон 2 (правый, над стеной 2)'],['G4','Фронтон 4 (левый, над стеной 4)']]:[])];return [...ex,...P.walls.map((w,i)=>['I'+(i+1),'Перегородка I'+(i+1)])]}
+function wallOptions(){const wg=(P.blocks||[]).flatMap((k,i)=>{const id0=5+3*i;return [[`W${id0}`,`Стена ${id0} (крыло ${i+1}, боковая)`],[`W${id0+1}`,`Стена ${id0+1} (крыло ${i+1}, торцевая)`],[`W${id0+2}`,`Стена ${id0+2} (крыло ${i+1}, боковая)`]]});const ex=[['W1','Стена 1 (фасад, y=0)'],['W2','Стена 2 (правая)'],['W3','Стена 3 (задняя)'],['W4','Стена 4 (левая)'],...(P.roof!=='shed'?[['G2','Фронтон 2 (правый, над стеной 2)'],['G4','Фронтон 4 (левый, над стеной 4)']]:[])];return [...ex,...wg,...P.walls.map((w,i)=>['I'+(i+1),'Перегородка I'+(i+1)])]}
 function renderOps(){
   const el=$('#custom-ops'); if(!el) return;
   const wo=wallOptions();
@@ -1458,6 +1478,24 @@ function renderIW(){
     P.openings=P.openings.filter(o=>o.wall!==id).map(o=>{const m=/^I(\d+)$/.exec(o.wall);if(m&&+m[1]>i+1)o.wall='I'+(+m[1]-1);return o});schedule(true)}));
   $('#addIW').onclick=()=>{P.walls.push({axis:'y',c:R(P.A/3),from:0,to:P.B,bearing:false});schedule(true)};
 }
+function renderBlocks(){
+  const el=$('#custom-blocks');if(!el)return;
+  let h='<div class="rows">';
+  P.blocks.forEach((k,i)=>{const id0=5+3*i;h+=`<div class="row bk" data-i="${i}" style="grid-template-columns:1.3fr .8fr .8fr .8fr 26px">
+    <div><label for="bk${i}s">Крыло ${i+1}: к стене</label><select id="bk${i}s" data-f="side"><option value="W2" ${k.side!=='W3'?'selected':''}>2 (справа)</option><option value="W3" ${k.side==='W3'?'selected':''}>3 (сзади)</option></select></div>
+    <div><label for="bk${i}o">Отступ</label><input id="bk${i}o" type="number" data-f="off" value="${k.off}" step="100"></div>
+    <div><label for="bk${i}w">Ширина</label><input id="bk${i}w" type="number" data-f="w" value="${k.w}" step="100"></div>
+    <div><label for="bk${i}d">Вынос</label><input id="bk${i}d" type="number" data-f="depth" value="${k.depth}" step="100"></div>
+    <button class="x" data-del="${i}" aria-label="Удалить крыло">×</button>
+    <div class="note" style="grid-column:1/-1">Стены крыла: ${id0}, ${id0+1}, ${id0+2}${M?.errs?.some(e=>e.wall==='K'+(i+1))?' · <b style="color:var(--bad)">не построено — проверьте размеры</b>':''}</div></div>`});
+  h+=`</div><div class="btns" style="padding-bottom:12px"><button class="btn sm" id="addBK">+ крыло</button></div>
+  <div class="hint" style="padding-bottom:10px">Крыло — прямоугольная пристройка к стене 2 (справа) или 3 (сзади): одно крыло даёт Г-образный дом, крыло в середине стены — Т-образный. Отступ — от начала стены (стена 2 — от стены 1, стена 3 — от стены 4), ширина — вдоль стены, вынос — от стены наружу, наружные размеры. Стена основного дома на стыке остаётся внутренней — добавьте в ней дверь. Сейчас для крыла строятся стены, проёмы и помещения; фундамент, пол и крыша — следующий этап.</div>`;
+  el.innerHTML=h;const sm=$('#sum-blocks');if(sm)sm.textContent=P.blocks.length?P.blocks.length+' шт':'нет';
+  el.querySelectorAll('.row.bk').forEach(r=>{const i=+r.dataset.i;r.querySelectorAll('[data-f]').forEach(inp=>inp.addEventListener('change',()=>{const f=inp.dataset.f;let v=inp.value;if(f!=='side'){v=parseFloat(v);if(!Number.isFinite(v))return}P.blocks[i][f]=v;schedule(true)}))});
+  el.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click',()=>{const i=+b.dataset.del,id0=5+3*i;P.blocks.splice(i,1);
+    P.openings=P.openings.filter(o=>{const m=/^W(\d+)$/.exec(o.wall);return !(m&&+m[1]>=id0&&+m[1]<id0+3)}).map(o=>{const m=/^W(\d+)$/.exec(o.wall);if(m&&+m[1]>=id0+3)o.wall='W'+(+m[1]-3);return o});schedule(true)}));
+  $('#addBK').onclick=()=>{const Ls=+P.B,w=Math.min(4000,Math.max(2000,Ls-1000));P.blocks.push({side:'W2',off:0,w,depth:4000});schedule(true)};
+}
 function renderRooms(){
   const el=$('#custom-rooms');if(!el||!M)return;if(el.contains(document.activeElement)&&document.activeElement.tagName!=='BUTTON')return;
   const rs=M.rooms||[];
@@ -1498,7 +1536,7 @@ function download(name,text,mime){const b=new Blob([text],{type:mime});const a=d
 /* ---------- состояние / пересборка ---------- */
 let M=null,C=null,S=null,ADV=null,SHEETS=null,curSheet=0,dirty3d=true;
 let timer=null;
-function schedule(structural){clearTimeout(timer);timer=setTimeout(()=>{rebuild();if(structural){renderOps();renderIW()}renderRooms()},structural?0:220)}
+function schedule(structural){clearTimeout(timer);timer=setTimeout(()=>{rebuild();if(structural){renderOps();renderIW();renderBlocks()}renderRooms()},structural?0:220)}
 function rebuild(){
   try{if(enforceTech(P).includes('lumber'))mapToDb();({M,C}=buildFull(P));S=spec(M,C);ADV=advice(M,C,S)}catch(e){console.error(e);return}
   pushHistory();
@@ -1610,17 +1648,17 @@ function build3D(){
     const cap=new THREE.Mesh(boxGeo(t.kind==='driven'?300:250,t.kind==='driven'?300:250,8),capm);cap.position.set(p.x,p.y,M.H0+4);R3.groups.piles.add(cap);
     if(t.kind==='screw'||t.kind==='manual'){const bl=new THREE.Mesh(new THREE.CylinderGeometry(M.pileD*1.5,M.pileD*1.5,8,20),pm);bl.rotation.x=Math.PI/2;bl.position.set(p.x,p.y,-below+250);R3.groups.piles.add(bl)}
     if(t.base){const sp=new THREE.Mesh(new THREE.SphereGeometry(t.base/2,18,12),conc);sp.position.set(p.x,p.y,-below+t.base/2);R3.groups.piles.add(sp)}});
-  const gpad=3000,gw=M.A+2*gpad,gh=M.B+2*gpad;
+  const gpad=3000,AXg=M.AX||M.A,BYg=M.BY||M.B,gw=AXg+2*gpad,gh=BYg+2*gpad;
   const ground=new THREE.Mesh(new THREE.PlaneGeometry(gw,gh),new THREE.MeshLambertMaterial({color:0x7d9a6a,transparent:true,opacity:.35,side:THREE.DoubleSide,depthWrite:false}));
-  ground.position.set(M.A/2,M.B/2,0);ground.renderOrder=-1;root.add(ground);
-  const gridH=new THREE.GridHelper(Math.max(gw,gh),Math.round(Math.max(gw,gh)/1000),0x5d7350,0x8aa07b);gridH.rotation.x=Math.PI/2;gridH.position.set(M.A/2,M.B/2,1);gridH.material.transparent=true;gridH.material.opacity=.35;root.add(gridH);
+  ground.position.set(AXg/2,BYg/2,0);ground.renderOrder=-1;root.add(ground);
+  const gridH=new THREE.GridHelper(Math.max(gw,gh),Math.round(Math.max(gw,gh)/1000),0x5d7350,0x8aa07b);gridH.rotation.x=Math.PI/2;gridH.position.set(AXg/2,BYg/2,1);gridH.material.transparent=true;gridH.material.opacity=.35;root.add(gridH);
   const bg=getComputedStyle(document.documentElement).getPropertyValue('--scene').trim()||'#dce3de';R3.renderer.setClearColor(new THREE.Color(bg));
   applyLayers(false);
   if(!R3.fitted){fitCam();R3.fitted=true}
   draw3();
 }
 function applyLayers(redraw=true){Object.entries(R3.groups).forEach(([g,G])=>G.visible=!!layers[g]);if(redraw)draw3()}
-function fitCam(){const c=R3.cam;c.target.set(M.A/2000,M.zRidge/2000,-M.B/2000);c.r=Math.max(M.A,M.B,M.zRidge)/1000*2.1;c.theta=-2.25;c.phi=1.08}
+function fitCam(){const c=R3.cam,AX=M.AX||M.A,BY=M.BY||M.B;c.target.set(AX/2000,M.zRidge/2000,-BY/2000);c.r=Math.max(AX,BY,M.zRidge)/1000*2.1;c.theta=-2.25;c.phi=1.08}
 function resize3(){if(!R3)return;const cv=R3.renderer.domElement,w=cv.clientWidth,h=cv.clientHeight;if(!w||!h)return;R3.renderer.setSize(w,h,false);R3.camera.aspect=w/h;R3.camera.updateProjectionMatrix();draw3()}
 function draw3(){if(!R3)return;const {cam,camera}=R3,t=cam.target;camera.position.set(t.x+cam.r*Math.sin(cam.phi)*Math.cos(cam.theta),t.y+cam.r*Math.cos(cam.phi),t.z+cam.r*Math.sin(cam.phi)*Math.sin(cam.theta));camera.lookAt(t);R3.renderer.render(R3.scene,camera)}
 function pick3(e){
@@ -1661,8 +1699,8 @@ function elev(x,y,label,right=true){const d=right?1:-1;return Pg([[x,y],[x-1.3,y
 function bubble(x,y,l){return Ci(x,y,3.6,'t')+Tx(x,y+1,l,{size:3})}
 const AX_LET='АБВГДЕЖИКЛМНПРСТУФШЭЮЯ'; // без Ё З Й О Х Ц Ч Щ Ъ Ы Ь (ГОСТ Р 21.101)
 /* координационные оси: по осям наружных стен и перегородок */
-function planAxes(M){const d=M.d,axU=a=>[...new Set(a.map(v=>R(v)))].sort((p,q)=>p-q).filter((v,i,arr)=>!i||v-arr[i-1]>150);
-  return {ax:axU([d/2,...M.walls.filter(x=>!x.ext&&x.zb==null&&x.uy).map(x=>x.x0),M.A-d/2]),ay:axU([d/2,...M.walls.filter(x=>!x.ext&&x.zb==null&&x.ux).map(x=>x.y0),M.B-d/2])}}
+function planAxes(M){const axU=a=>[...new Set(a.map(v=>R(v)))].sort((p,q)=>p-q).filter((v,i,arr)=>!i||v-arr[i-1]>150),WL=M.walls.filter(x=>x.zb==null);
+  return {ax:axU(WL.filter(x=>x.uy).map(x=>x.x0)),ay:axU(WL.filter(x=>x.ux).map(x=>x.y0))}}
 function tableBlock(x,y,w,h,title,cols,rows){
   const rh=4.0,hh=5.2,W=cols.reduce((a,c)=>a+c.w,0);let s=Tx(x,y-1.2,title,{a:'start',size:2.6,cls:'b'});
   const per=Math.max(1,Math.floor((h-hh)/rh)),ncol=Math.max(1,Math.floor((w+3)/(W+3)));
@@ -1726,12 +1764,13 @@ function sheetGrill(){
   return {code:'Ф-2',title:'План ростверка и лаг',sub:`Промежуточных балок: ${M.nMid}, пролёт лаг ${R(M.Lj)} мм`,scale:s,body:g};
 }
 function sheetPlan(){
-  const {A,B,d}=M,EW=96,aw=385-EW,mL=46,mR=30,mT=26,mB=44,s=fit(A,B,aw-mL-mR,222-mT-mB);
-  const w=A/s,h=B/s,px0=25+mL+(aw-mL-mR-w)/2,py0=10+mT+(222-mT-mB-h)/2;
-  const X=x=>px0+x/s,Y=y=>py0+(B-y)/s;let g=Tx(25+aw/2,16,`План 1 этажа  М 1:${s}`,{size:3.5,cls:'b'});
+  const {A,B,d}=M,AX=M.AX||A,BY=M.BY||B,EW=96,aw=385-EW,mL=46,mR=30,mT=26,mB=44,s=fit(AX,BY,aw-mL-mR,222-mT-mB);
+  const w=AX/s,h=BY/s,px0=25+mL+(aw-mL-mR-w)/2,py0=10+mT+(222-mT-mB-h)/2;
+  const X=x=>px0+x/s,Y=y=>py0+(BY-y)/s;let g=Tx(25+aw/2,16,`План 1 этажа  М 1:${s}`,{size:3.5,cls:'b'});
+  const wgS=side=>(M.wings||[]).filter(k=>k.side===side);
   const {ax,ay}=planAxes(M);
-  ax.forEach((x,i)=>{g+=Ln(X(x),Y(B)-5,X(x),Y(0)+35,'ax')+bubble(X(x),Y(0)+38.6,i+1)});
-  ay.forEach((y,i)=>{g+=Ln(X(A)+5,Y(y),X(0)-35,Y(y),'ax')+bubble(X(0)-38.6,Y(y),AX_LET[i]||'?')});
+  ax.forEach((x,i)=>{g+=Ln(X(x),Y(BY)-5,X(x),Y(0)+35,'ax')+bubble(X(x),Y(0)+38.6,i+1)});
+  ay.forEach((y,i)=>{g+=Ln(X(AX)+5,Y(y),X(0)-35,Y(y),'ax')+bubble(X(0)-38.6,Y(y),AX_LET[i]||'?')});
   /* помещения: лёгкая заливка */
   (M.rooms||[]).forEach(r=>r.cells.forEach(c=>g+=`<rect x="${f2(X(c[0]))}" y="${f2(Y(c[3]))}" width="${f2((c[2]-c[0])/s)}" height="${f2((c[3]-c[1])/s)}" fill="${r.kind==='living'?'#F3F7F1':r.kind==='tech'?'#F6F1EA':'#F7F7F7'}" stroke="none"/>`));
   const WL=M.walls.filter(w=>w.zb==null);
@@ -1742,17 +1781,19 @@ function sheetPlan(){
     g+=Rc(X(x0),Y(y1),(x1-x0)/s,(y1-y0)/s,'op');
     if(o.type==='window'){if(wl.ux)g+=Ln(X(x0),Y(wl.y0),X(x1),Y(wl.y0));else g+=Ln(X(wl.x0),Y(y0),X(wl.x0),Y(y1))}
     else{const rr=o.w/s;if(wl.ux)g+=`<path d="M${f2(X(x0))} ${f2(Y(wl.y0+wl.d/2))} l0 ${f2(-rr)} A${f2(rr)} ${f2(rr)} 0 0 1 ${f2(X(x1))} ${f2(Y(wl.y0+wl.d/2))}" class="t"/>`;else g+=`<path d="M${f2(X(wl.x0+wl.d/2))} ${f2(Y(y0))} l${f2(rr)} 0 A${f2(rr)} ${f2(rr)} 0 0 0 ${f2(X(wl.x0+wl.d/2))} ${f2(Y(y1))}" class="t"/>`}
-    const inw={W1:[0,1],W3:[0,-1],W2:[-1,0],W4:[1,0]}[wl.id]||[-wl.uy,wl.ux],off=wl.d/2/s+(wl.uy?2.8:3.6);
+    const inw=wl.inw||{W1:[0,1],W3:[0,-1],W2:[-1,0],W4:[1,0]}[wl.id]||[-wl.uy,wl.ux],off=wl.d/2/s+(wl.uy?2.8:3.6);
     const cx=wl.ux?X((x0+x1)/2):X(wl.x0)+inw[0]*off,cy=wl.ux?Y(wl.y0)-inw[1]*off+(inw[1]<0?0:0.9):Y((y0+y1)/2);g+=Tx(cx,cy,o.mark,{size:2.2,rot:wl.uy?-90:0})})});
   WL.forEach(wl=>{const sx=X(wl.x0),sy=Y(wl.y0),dx=wl.ux*7,dy=-wl.uy*7;g+=Ln(sx,sy,sx+dx,sy+dy,'m')+Pg([[sx+dx,sy+dy],[sx+dx-wl.ux*1.8-wl.uy*.9,sy+dy+wl.uy*1.8-wl.ux*.9],[sx+dx-wl.ux*1.8+wl.uy*.9,sy+dy+wl.uy*1.8+wl.ux*.9]],'blk');
     const mx=wl.x0+wl.ux*wl.L/2,my=wl.y0+wl.uy*wl.L/2;
     if(wl.ext){g+=Tx(sx+dx+wl.ux*5.5+(wl.uy?(wl.id==='W4'?2.6:-2.6):0),sy+dy-wl.uy*5.5+(wl.ux?(wl.id==='W1'?-1.6:3.4):0),'ст.'+wl.id.slice(1),{size:2,rot:wl.uy?-90:0})}
     else g+=Tx(X(mx)+(wl.uy?3.2:wl.L/s*.2),Y(my)-(wl.ux?wl.d/2/s+1.2:-wl.L/s*.2),wl.id+(wl.bearing?' несущ.':''),{size:2.3,a:'start'})});
   const opsW=id=>{const wl=M.walls.find(x=>x.id===id);return wl.ops.filter(o=>o.ok).flatMap(o=>[o.x,o.x+o.w].map(v=>(wl.ux?wl.x0:wl.y0)+v))};
-  g+=chainH([0,M.d,...opsW('W1'),A-M.d,A],X,Y(0)+9,Y(0))+chainH([0,...ax,A],X,Y(0)+17,Y(0))+dimH(X(0),X(A),Y(0)+25,Y(0),A);
-  g+=chainH([0,M.d,...opsW('W3'),A-M.d,A],X,Y(B)-9,Y(B))+dimH(X(0),X(A),Y(B)-17,Y(B),A);
-  g+=chainV([0,M.d,...opsW('W4'),B-M.d,B],Y,X(0)-9,X(0))+chainV([0,...ay,B],Y,X(0)-17,X(0))+dimV(Y(0),Y(B),X(0)-25,X(0),B);
-  g+=chainV([0,M.d,...opsW('W2'),B-M.d,B],Y,X(A)+11,X(A))+dimV(Y(0),Y(B),X(A)+19,X(A),B);
+  g+=chainH([0,M.d,...opsW('W1'),A-M.d,A],X,Y(0)+9,Y(0))+chainH([0,...ax,AX],X,Y(0)+17,Y(0))+dimH(X(0),X(AX),Y(0)+25,Y(0),AX);
+  if(!wgS('W3').length)g+=chainH([0,M.d,...opsW('W3'),A-M.d,A],X,Y(B)-9,Y(B))+dimH(X(0),X(AX),Y(BY)-17,Y(BY),AX);
+  else g+=chainH([0,...wgS('W3').flatMap(k=>[k.x0,k.x1]),AX],X,Y(BY)-9,Y(BY))+dimH(X(0),X(AX),Y(BY)-17,Y(BY),AX);
+  g+=chainV([0,M.d,...opsW('W4'),B-M.d,B],Y,X(0)-9,X(0))+chainV([0,...ay,BY],Y,X(0)-17,X(0))+dimV(Y(0),Y(BY),X(0)-25,X(0),BY);
+  if(!wgS('W2').length)g+=chainV([0,M.d,...opsW('W2'),B-M.d,B],Y,X(AX)+11,X(AX))+dimV(Y(0),Y(BY),X(AX)+19,X(AX),BY);
+  else g+=chainV([0,...wgS('W2').flatMap(k=>[k.y0,k.y1]),BY],Y,X(AX)+11,X(AX))+dimV(Y(0),Y(BY),X(AX)+19,X(AX),BY);
   /* марки помещений: номер, название, площадь */
   (M.rooms||[]).forEach(r=>{const cx=X(r.x),cy=Y(r.y),wmm=(r.x1-r.x0)/s,sz=wmm<22?1.8:2.2,nm=r.name.length*sz*.5>wmm-2?r.name.slice(0,Math.max(3,Math.floor((wmm-2)/(sz*.5))))+'…':r.name,ar=fmt(r.area,1);
     g+=Ci(cx,cy-3.4,2.5,'t')+Tx(cx,cy-2.5,r.no,{size:2.4,cls:'b'})+Tx(cx,cy+1.2,nm,{size:sz})+Tx(cx,cy+4.6,ar,{size:sz,cls:'b'})+Ln(cx-ar.length*sz*.28,cy+5.3,cx+ar.length*sz*.28,cy+5.3)});
@@ -1826,7 +1867,7 @@ function sheetRoofPlan(code){
   const {A,B,ov,og,tn,d}=M,W0=A+2*og,H0=B+2*ov,mL=46,mR=24,mT=26,mB=44,aw=385-96,s=fit(W0,H0,aw-mL-mR,222-mT-mB);
   const w=W0/s,h=H0/s,px0=25+mL+(aw-mL-mR-w)/2+og/s,py0=10+mT+(222-mT-mB-h)/2+ov/s;
   const X=x=>px0+x/s,Y=y=>py0+(B-y)/s;let g=Tx(25+aw/2,16,`План кровли  М 1:${s}`,{size:3.5,cls:'b'});
-  const {ax,ay}=planAxes(M);
+  const pa=planAxes(M),ax=pa.ax.filter(x=>x>=-og&&x<=A+og),ay=pa.ay.filter(y=>y>=-ov&&y<=B+ov);
   ax.forEach((x,i)=>{g+=Ln(X(x),Y(B+ov)-5,X(x),Y(-ov)+35,'ax')+bubble(X(x),Y(-ov)+38.6,i+1)});
   ay.forEach((y,i)=>{g+=Ln(X(A+og)+5,Y(y),X(-og)-35,Y(y),'ax')+bubble(X(-og)-38.6,Y(y),AX_LET[i]||'?')});
   /* скаты: заливка, контур кровли, стены пунктиром */
