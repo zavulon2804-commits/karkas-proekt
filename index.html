@@ -3,32 +3,32 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=JetBrains+Mono:wght@400&display=swap">
 <script type="module">import * as T from "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js";window.THREE=T;window.dispatchEvent(new Event("three-ready"))</script>
 <style>
 /* Layout: инженерный пульт — колонка параметров слева, рабочее поле с вкладками справа; чертежи всегда на белой бумаге */
 :root{
-  --bg:#EDF0EC; --panel:#FBFCFA; --ink:#17201C; --muted:#5B6862; --line:#D2D9D3; --soft:#E3E9E4;
-  --accent:#2D6A4F; --accent-ink:#FFFFFF; --timber:#B5772D;
-  --ok:#2E7D4F; --warn:#9A620F; --bad:#BE3B28; --okbg:#E1F0E6; --warnbg:#F6EBD6; --badbg:#F7E0DB; --infobg:#E3EBF0; --info:#2F5C78;
-  --scene:#DCE3DE; --paper:#FFFFFF;
-  --f-ui:"Golos Text",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-  --f-mono:"JetBrains Mono",ui-monospace,Consolas,"Courier New",monospace;
+  --bg:#E6E3DE; --panel:#FBFAF7; --ink:#1F1B16; --muted:#6B6458; --line:#D6D1C8; --soft:#EFEBE4;
+  --accent:#F4B400; --accent-ink:#1F1B16; --accent-2:#8C5A2B; --timber:#8C5A2B; --canvas:#F3F1EC; --wall:#3A2E22;
+  --ok:#2E7D4F; --warn:#9A620F; --bad:#BE3B28; --okbg:#E1F0E6; --warnbg:#F6EBD6; --badbg:#F7E0DB; --infobg:#E7EEF2; --info:#2F5C78;
+  --scene:#E4E0D8; --paper:#FFFFFF;
+  --f-ui:"Onest",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-mono:"Onest",system-ui,sans-serif;
   --r:8px;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --bg:#111614; --panel:#171D1A; --ink:#E3E9E5; --muted:#97A59E; --line:#2B3530; --soft:#1F2723;
-    --accent:#62B98F; --accent-ink:#0C1310; --timber:#D9A35E;
-    --ok:#5FBF89; --warn:#E3A84E; --bad:#F07C66; --okbg:#173022; --warnbg:#33281A; --badbg:#3A1F1A; --infobg:#1B2A33; --info:#8EC1DE;
-    --scene:#1A211E; --paper:#FFFFFF; color-scheme:dark;
+    --bg:#1B232C; --panel:#222C37; --ink:#E2E8EF; --muted:#93A3B4; --line:#34424F; --soft:#2A3541;
+    --accent:#F4B400; --accent-ink:#1B1A16; --accent-2:#E8913A; --timber:#D9A35E; --canvas:#1F2831; --wall:#D3DDE7;
+    --ok:#6CC08F; --warn:#E3A84E; --bad:#F07C66; --okbg:#173022; --warnbg:#33281A; --badbg:#3A1F1A; --infobg:#1B2A33; --info:#8EC1DE;
+    --scene:#1F2831; --paper:#FFFFFF; color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
-  --bg:#111614; --panel:#171D1A; --ink:#E3E9E5; --muted:#97A59E; --line:#2B3530; --soft:#1F2723;
-  --accent:#62B98F; --accent-ink:#0C1310; --timber:#D9A35E;
-  --ok:#5FBF89; --warn:#E3A84E; --bad:#F07C66; --okbg:#173022; --warnbg:#33281A; --badbg:#3A1F1A; --infobg:#1B2A33; --info:#8EC1DE;
-  --scene:#1A211E; --paper:#FFFFFF; color-scheme:dark;
+  --bg:#1B232C; --panel:#222C37; --ink:#E2E8EF; --muted:#93A3B4; --line:#34424F; --soft:#2A3541;
+  --accent:#F4B400; --accent-ink:#1B1A16; --accent-2:#E8913A; --timber:#D9A35E; --canvas:#1F2831; --wall:#D3DDE7;
+  --ok:#6CC08F; --warn:#E3A84E; --bad:#F07C66; --okbg:#173022; --warnbg:#33281A; --badbg:#3A1F1A; --infobg:#1B2A33; --info:#8EC1DE;
+  --scene:#1F2831; --paper:#FFFFFF; color-scheme:dark;
 }
 *{box-sizing:border-box}
 html,body{background:var(--bg);color:var(--ink)}
@@ -36,8 +36,8 @@ body{font-family:var(--f-ui);font-size:14px;line-height:1.45;margin:0}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--panel)}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
-:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.mono,.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+body,.mono,.num,input,select{font-variant-numeric:tabular-nums}
 
 /* top bar */
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--panel);border-bottom:1px solid var(--line);
@@ -55,9 +55,9 @@ button{cursor:pointer}
 .start select{flex:1;min-width:0;border:1px solid var(--line);border-radius:6px;background:var(--bg);padding:5px 8px}
 .start .btns{flex-wrap:nowrap}
 .sitecard{border:1px solid var(--line);border-radius:6px;background:var(--bg);padding:8px 10px;display:flex;flex-direction:column;gap:6px}
-.kpi{border:1px solid var(--line);border-radius:6px;padding:4px 10px;background:var(--bg);min-width:0}
-.kpi small{display:block;font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
-.kpi b{font-family:var(--f-mono);font-weight:500;font-size:13.5px;font-variant-numeric:tabular-nums}
+.kpi{padding:2px 6px;min-width:0;white-space:nowrap}
+.kpi small{display:block;font-size:11px;color:var(--muted)}
+.kpi b{font-weight:600;font-size:14px}
 .kpi.ok b{color:var(--ok)} .kpi.bad b{color:var(--bad)} .kpi.warn b{color:var(--warn)}
 
 .shell{display:grid;grid-template-columns:360px minmax(0,1fr);gap:0;align-items:start}
@@ -104,7 +104,8 @@ details.grp>summary small{color:var(--muted);font-weight:400;font-size:12px;marg
 .x:hover{color:var(--bad)}
 .btn{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:6px 12px;font-size:13px}
 .btn:hover{border-color:var(--accent)}
-.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600;box-shadow:inset 0 -2px 0 rgba(0,0,0,.14)}
+.btn.pri:hover{border-color:var(--ink)}
 .btn.sm{padding:3px 9px;font-size:12px}
 .btn.danger{color:var(--bad)}
 .btns{display:flex;gap:6px;flex-wrap:wrap}
@@ -114,7 +115,7 @@ textarea.json{width:100%;min-height:90px;border:1px solid var(--line);border-rad
 /* tabs */
 .tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:14px;overflow-x:auto;scrollbar-width:thin}
 .tabs button{border:0;background:transparent;padding:9px 14px;border-bottom:2px solid transparent;color:var(--muted);white-space:nowrap;font-weight:500}
-.tabs button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--accent)}
+.tabs button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
 .tabs button .cnt{font-family:var(--f-mono);font-size:11px;border-radius:9px;padding:0 6px;margin-left:5px;background:var(--soft)}
 .tabs button .cnt.bad{background:var(--badbg);color:var(--bad)}
 .tabs button .cnt.warn{background:var(--warnbg);color:var(--warn)}
@@ -241,33 +242,63 @@ mark{background:color-mix(in srgb,var(--warn) 30%,transparent);color:inherit}
   #print-area td,#print-area th{border:0.2mm solid #000;padding:1mm 2mm;font-size:9pt}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
-/* планировщик АР */
-.pl-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 8px}
-.pl-bar .btn[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-.pl-snap{font-size:12px;color:var(--muted);margin-left:6px}
-.pl-wrap{display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:10px;height:calc(100vh - 250px);min-height:480px}
-#plSvg{width:100%;height:100%;background:#FAFBF9;border:1px solid var(--line);border-radius:8px;touch-action:none;user-select:none;-webkit-user-select:none;font-family:inherit}
-.pl-side{overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px}
-.pl-side h3{margin:0 0 8px;font-size:15px}
-.pl-f{display:grid;grid-template-columns:1fr 92px auto;gap:6px;align-items:center;margin:0 0 6px}
-.pl-f input[type=number],.pl-f input[type=text],.pl-f select{width:100%}
-.pl-f:has(input[type=text]),.pl-f:has(select){grid-template-columns:1fr 150px}
-.pl-f.chk{display:flex;gap:6px}
-.pl-sum{color:var(--muted);margin:6px 0}
-.pl-help{color:var(--muted);font-size:12px;border-top:1px solid var(--line);padding-top:8px;margin-top:10px}
+/* планировщик АР: сцена с мерной шкалой, вертикальная панель инструментов, свойства справа, строка состояния */
+.pl-wrap{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:0;height:calc(100vh - 150px);min-height:500px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel)}
+.pl-stage{position:relative;background:var(--canvas);min-width:0}
+#plSvg{position:absolute;left:28px;top:28px;width:calc(100% - 28px);height:calc(100% - 28px);touch-action:none;user-select:none;-webkit-user-select:none;font-family:inherit}
+.pl-rul{position:absolute;background:var(--accent);pointer-events:none;font-family:inherit}
+.pl-rx{left:0;top:0;width:100%;height:28px;border-bottom:1px solid rgba(0,0,0,.18)}
+.pl-ry{left:0;top:0;width:28px;height:100%;border-right:1px solid rgba(0,0,0,.18)}
+.pl-corner{position:absolute;left:0;top:0;width:28px;height:28px;background:var(--accent);color:var(--accent-ink);font-size:11px;font-weight:600;display:grid;place-items:center;z-index:2;border-right:1px solid rgba(0,0,0,.18);border-bottom:1px solid rgba(0,0,0,.18)}
+.pl-tools{position:absolute;left:40px;top:40px;display:flex;flex-direction:column;gap:2px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:5px;box-shadow:0 3px 14px rgba(31,27,22,.12);z-index:3}
+.pl-tool{width:40px;height:40px;border:0;border-radius:8px;background:transparent;color:var(--muted);display:grid;place-items:center}
+.pl-tool svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round}
+.pl-tool:hover{background:var(--soft);color:var(--ink)}
+.pl-tool[aria-pressed=true]{background:var(--accent);color:var(--accent-ink)}
+.pl-view{position:absolute;right:12px;top:40px;display:flex;gap:6px;z-index:3}
+.pl-side{overflow:auto;border-left:1px solid var(--line);padding:14px;font-size:13px}
+.pl-side h3{margin:0 0 10px;font-size:16px}
+.pl-f{display:grid;grid-template-columns:1fr 104px auto;gap:6px;align-items:center;margin:0 0 7px;color:var(--muted)}
+.pl-f input[type=number],.pl-f input[type=text],.pl-f select{width:100%;border:1px solid var(--line);border-radius:6px;background:var(--canvas);padding:6px 8px;color:var(--ink);text-align:right}
+.pl-f select,.pl-f input[type=text]{text-align:left}
+.pl-f:has(input[type=text]),.pl-f:has(select){grid-template-columns:1fr 160px}
+.pl-f.chk{display:flex;gap:6px;color:var(--ink)}
+.pl-sum{color:var(--muted);margin:6px 0;line-height:1.5}
+.pl-help{color:var(--muted);font-size:12px;border-top:1px solid var(--line);padding-top:10px;margin-top:14px;line-height:1.5}
 .pl-side .err{color:var(--bad);margin:4px 0}
-@media (max-width:900px){.pl-wrap{grid-template-columns:1fr;height:auto}#plSvg{height:62vh}}
+.pl-status{display:flex;gap:18px;align-items:center;padding:7px 4px 0;color:var(--muted);font-size:12px;flex-wrap:wrap}
+.pl-status b{color:var(--ink);font-weight:600}
+.pl-status select{border:1px solid var(--line);border-radius:5px;background:var(--panel);padding:1px 4px}
+.pl-keys{margin-left:auto}
+@media (max-width:900px){.pl-wrap{grid-template-columns:1fr;height:auto}.pl-stage{height:62vh}.pl-side{border-left:0;border-top:1px solid var(--line)}.pl-keys{display:none}}
 .pl-cat{border-bottom:1px solid var(--line);padding:4px 0}.pl-cat summary{cursor:pointer;font-weight:600;padding:3px 0}.pl-items{display:flex;flex-wrap:wrap;gap:4px;padding:4px 0}
 .v3mode{display:flex;gap:4px;margin:0 0 8px}.v3mode .btn[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+
+/* шаги работы в шапке — «лента рулетки» */
+.steps{display:flex;gap:2px;background:var(--soft);padding:3px;border-radius:999px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+.steps button{border:0;background:transparent;border-radius:999px;padding:6px 14px 6px 6px;display:flex;align-items:center;gap:8px;color:var(--muted);font-weight:500;white-space:nowrap}
+.steps button b{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:12px;background:var(--panel);color:var(--muted);border:1px solid var(--line)}
+.steps button:hover{color:var(--ink)}
+.steps button[aria-current=step]{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.steps button[aria-current=step] b{background:var(--accent-ink);color:var(--accent);border-color:transparent}
+.steps .dot.bad{width:7px;height:7px;border-radius:50%;background:var(--bad);display:inline-block}
+.side-h{font-size:17px;margin:2px 0 8px}
+.top{gap:14px 18px}
+.top .kpis{gap:14px}
+details.grp>summary{font-weight:600}
+@media (max-width:1100px){.top .kpis{order:5;width:100%;margin-left:0}}
+@media (max-width:700px){.brand span{display:none}.top{padding-block:8px;gap:8px}.top .kpis .kpi:nth-child(-n+2){display:none}.steps button{padding:5px 10px 5px 5px}.hbtns #helpBtn{display:none}}
+@media (min-width:1101px){.top{flex-wrap:nowrap}.top .kpis{flex-wrap:nowrap;gap:12px}.brand span{max-width:200px}}
 </style>
 
 <header class="top">
   <div class="brand">
-    <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><rect x="1" y="1" width="32" height="32" rx="7" fill="var(--accent)"/><path d="M7 17 17 9l10 8M10 15v10h14V15M14 25v-6h6v6" fill="none" stroke="var(--accent-ink)" stroke-width="2" stroke-linejoin="round"/><path d="M9 28h16" stroke="var(--accent-ink)" stroke-width="1.6" stroke-dasharray="2 2"/></svg>
+    <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="var(--accent)"/><path d="M8 16.5 16 9.5l8 7M10.5 15v8h11v-8" fill="none" stroke="var(--accent-ink)" stroke-width="2" stroke-linejoin="round"/></svg>
     <div><b>Каркас-Проект</b><span id="pname"></span></div>
   </div>
-  <div class="hbtns"><button class="btn sm" id="undo" title="Отменить (Ctrl+Z)" aria-label="Отменить">↶ Отменить</button><button class="btn sm" id="redo" title="Повторить (Ctrl+Y)" aria-label="Повторить">↷</button></div>
+  <nav class="steps" id="steps" aria-label="Шаги работы"></nav>
   <div class="kpis" id="kpis"></div>
+  <div class="hbtns"><button class="btn sm" id="undo" title="Отменить (Ctrl+Z)" aria-label="Отменить">↶</button><button class="btn sm" id="redo" title="Повторить (Ctrl+Y)" aria-label="Повторить">↷</button><button class="btn sm" id="helpBtn" title="Справка и нормы">Справка</button></div>
 </header>
 
 <div class="shell">
@@ -1505,7 +1536,7 @@ const FORM=[
     {hint:'Укосины ставятся под 45–60° на сплошных участках стены, в каждой стене — обоих направлений. Если по СНиП им не хватает места (мешают проёмы), стена автоматически получает плитную обшивку. Фронтоны обшиваются всегда.'}]},
   {id:'ops',t:'АР · Окна и двери',custom:'ops'},
   {id:'iw',t:'АР · Перегородки',custom:'iw'},
-  {id:'blocks',t:'АР · Крылья дома (Г-, Т-, П-образный план)',custom:'blocks'},
+  {id:'blocks',t:'АР · Крылья дома',custom:'blocks'},
   {id:'rooms',t:'АР · Помещения',custom:'rooms'},
   {id:'fin',t:'АР · Отделка',f:[{k:'finFacade',l:'Фасад',type:'sel',opts:finOpts('facade'),wide:true},{k:'finWall',l:'Стены помещений (по умолчанию)',type:'sel',opts:finOpts('wall'),wide:true},{k:'finFloor',l:'Пол (по умолчанию)',type:'sel',opts:finOpts('floor'),wide:true},{k:'finCeil',l:'Потолок (по умолчанию)',type:'sel',opts:finOpts('ceil'),wide:true},
     {hint:'Санузлам и ванным плитка назначается сама (по названию помещения); котельной, кухне и прихожей — керамогранит на пол. Отделку отдельной комнаты меняйте на плане: нажмите на помещение.'}]},
@@ -1586,10 +1617,10 @@ const getK=k=>k.split('.').reduce((o,x)=>o?.[x],P);
 const setK=(k,v)=>{const p=k.split('.');let o=P;for(let i=0;i<p.length-1;i++)o=o[p[i]];o[p.at(-1)]=v};
 
 function renderSide(){
-  const el=$('#side'); let h=`<div class="start"><label for="tplSel">Начать с шаблона</label><div class="btns"><select id="tplSel">${Object.entries(TEMPLATES).map(([k,t])=>`<option value="${k}">${esc(t.n)}</option>`).join('')}</select><button class="btn sm" id="tplGo">Загрузить</button></div><div class="note" id="tplMsg">Шаблон заменит текущий проект. Отменить — кнопкой ↶ вверху.</div></div>`;
+  const el=$('#side'); let h=`<h2 class="side-h"></h2><div class="start"><label for="tplSel">Начать с шаблона</label><div class="btns"><select id="tplSel">${Object.entries(TEMPLATES).map(([k,t])=>`<option value="${k}">${esc(t.n)}</option>`).join('')}</select><button class="btn sm" id="tplGo">Загрузить</button></div><div class="note" id="tplMsg">Шаблон заменит текущий проект. Отменить — кнопкой ↶ вверху.</div></div>`;
   const openState=(()=>{try{return JSON.parse(localStorage.getItem(LS_KEY+'-open')||'null')}catch(e){return null}})()||{site:true,house:true};
   FORM.forEach(g=>{
-    h+=`<details class="grp" data-g="${g.id}" ${openState[g.id]?'open':''}><summary>${esc(g.t)}<small id="sum-${g.id}"></small></summary>`;
+    h+=`<details class="grp" data-g="${g.id}" ${openState[g.id]?'open':''}><summary>${esc(g.t.replace(/^(\d+ · Исходные данные: |АР · |КР · )/,'').replace(/^./,c=>c.toUpperCase()))}<small id="sum-${g.id}"></small></summary>`;
     if(g.custom) h+=`<div id="custom-${g.custom}"></div>`;
     else{h+='<div class="fields">';g.f.forEach(f=>{
       if(f.hint){h+=`<div class="hint">${esc(f.hint)}</div>`;return}
@@ -1631,6 +1662,7 @@ function renderSide(){
   renderOps(); renderIW(); renderBlocks(); renderRooms(); renderFile(); renderSite();
   $('#tplGo').onclick=()=>{const t=TEMPLATES[$('#tplSel').value],keep={tech:P.tech,lumber:P.lumber,site:P.site,snow:P.snow,wind:P.wind,climMode:P.climMode,freeze:P.freeze,freezeAuto:P.freezeAuto,db:P.db};P=normalize(t.f());Object.assign(P,keep);{const T=TECH[P.tech];if(T&&T.def)Object.assign(P,T.def)}mapToDb();const fx=autoFix();renderSide();rebuild();$('#tplMsg').textContent='Загружен шаблон «'+t.n+'»'+(fx.length?'. Сечения подобраны по расчёту: '+fx.join('; '):'')+'. Отменить — кнопкой ↶.'};
   renderSums();
+  applyStep();
 }
 function tpl(name,A,B,H,walls,ops){const o=clone(DEF);return Object.assign(o,{name,A,B,H,walls,openings:ops})}
 const W=(wall,type,x,w,h=type==='door'?2100:1400,sill=type==='door'?0:900)=>({wall,type,x,w,h,sill});
@@ -1777,26 +1809,35 @@ function renderTop(){
   $('#pname').textContent=P.name||'';
   const nb=C.checks.filter(c=>!c.ok).length, nw=ADV.filter(a=>a.lvl==='warn').length;
   $('#kpis').innerHTML=[
-    ['Технология',(TECH[P.tech]||TECH.free).short],
-    ['Площадь застройки',fmt(tep(M).build,1)+' м²'],
-    ['Пиломатериал',fmt(S.woodVol,2)+' м³'],
+    ['Площадь',fmt(tep(M).build,1)+' м²'],
     ...(M.mans&&M.mansOk?[['Мансарда, h≥1,5 м',fmt(M.mansArea,1)+' м²']]:[]),
-    ['Свай',M.piles.length+' шт'],
-    ['Материалы ≈',rub(S.total)],
-    ['Отделка ≈',rub(S.fin.total)],
+    ['Материалы',rub(S.total)],
+    ['Отделка',rub(S.fin.total)],
     ['Расчёт',nb?`${nb} не проходит`:`${C.checks.length} из ${C.checks.length} ✓`,nb?'bad':'ok']
   ].map(([a,b,c])=>`<div class="kpi ${c||''}"><small>${a}</small><b>${b}</b></div>`).join('');
+  {const d=$('#dot-kr');if(d){d.className='dot'+(nb?' bad':'');d.title=nb?nb+' проверок не проходит':''}}
   const t=$('#tabs').querySelector('[data-t="adv"] .cnt'); if(t){const nbad=ADV.filter(a=>a.lvl==='bad').length;t.textContent=nbad||nw||'✓';t.className='cnt'+(nbad?' bad':nw?' warn':'')}
   const tc=$('#tabs').querySelector('[data-t="calc"] .cnt'); if(tc){tc.textContent=nb?nb:'✓';tc.className='cnt'+(nb?' bad':'')}
 }
 
 /* ---------- вкладки ---------- */
-/* порядок работы: исходные данные (форма слева) → АР (план) → КР (3D, расчёт, чертежи, спецификация) */
-const TABS=[['plan','1 · План (АР)'],['3d','2 · 3D-модель'],['calc','3 · Расчёт (КР)',true],['draw','4 · Чертежи'],['spec','Спецификация и смета'],['cut','Раскрой'],['adv','Советы',true],['db','База материалов'],['kb','База знаний']];
+/* шаги работы: данные → план (АР) → конструкции (КР) → чертежи и смета; у шага — свои разделы слева и свои вкладки */
+const TABS=[['plan','План'],['3d','3D-модель'],['calc','Расчёт',true],['adv','Советы',true],['draw','Чертежи'],['spec','Спецификация и смета'],['cut','Раскрой'],['db','База материалов'],['kb','Справка']];
+const STEPS=[{k:'data',n:'Данные',secs:['site','loads','house'],tabs:['plan']},{k:'ar',n:'План',secs:['blocks','iw','ops','rooms','fin','roof'],tabs:['plan','3d']},
+  {k:'kr',n:'Конструкции',secs:['found','walls','roof'],tabs:['3d','calc','adv']},{k:'docs',n:'Чертежи и смета',secs:['cutp','prices','file'],tabs:['draw','spec','cut','db']}];
+let curStep='ar';try{curStep=localStorage.getItem(LS_KEY+'-step')||'ar'}catch(e){}if(!STEPS.some(s=>s.k===curStep))curStep='ar';
+const stepOf=k=>STEPS.find(s=>s.k===k)||STEPS[1];
+function renderSteps(){const el=$('#steps');if(!el)return;el.innerHTML=STEPS.map((s,i)=>`<button data-step="${s.k}" aria-current="${s.k===curStep?'step':'false'}"><b>${i+1}</b>${s.n}<span class="dot" id="dot-${s.k}"></span></button>`).join('');
+  el.querySelectorAll('[data-step]').forEach(b=>b.onclick=()=>setStep(b.dataset.step))}
+function setStep(k,tab){curStep=k;try{localStorage.setItem(LS_KEY+'-step',k)}catch(e){}const st=stepOf(k);if(tab)curTab=tab;else if(!st.tabs.includes(curTab))curTab=st.tabs[0];
+  renderSteps();applyStep();renderTabs();renderActive();if(typeof renderTop==='function'&&M)renderTop()}
+function applyStep(){const st=stepOf(curStep);document.querySelectorAll('#side details.grp').forEach(d=>{const on=st.secs.includes(/** @type {HTMLElement} */(d).dataset.g);/** @type {HTMLElement} */(d).hidden=!on});
+  const sb=$('#side .start');if(sb)sb.hidden=curStep!=='data';const hd=$('#side .side-h');if(hd)hd.textContent=st.n}
 let curTab='plan'; try{curTab=localStorage.getItem(LS_KEY+'-tab2')||'plan'}catch(e){}
-if(!TABS.some(t=>t[0]===curTab)) curTab='plan';
+if(!TABS.some(t=>t[0]===curTab)||!stepOf(curStep).tabs.includes(curTab)) curTab=stepOf(curStep).tabs[0];
 function renderTabs(){
-  $('#tabs').innerHTML=TABS.map(([k,l,c])=>`<button role="tab" data-t="${k}" aria-selected="${k===curTab}">${l}${c?'<span class="cnt"></span>':''}</button>`).join('');
+  const st=stepOf(curStep),vis=curTab==='kb'?['kb']:st.tabs;$('#tabs').hidden=vis.length<2;
+  $('#tabs').innerHTML=TABS.filter(t=>vis.includes(String(t[0]))).map(([k,l,c])=>`<button role="tab" data-t="${k}" aria-selected="${k===curTab}">${l}${c?'<span class="cnt"></span>':''}</button>`).join('');
   $('#tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{curTab=b.dataset.t;try{localStorage.setItem(LS_KEY+'-tab2',curTab)}catch(e){}
     $('#tabs').querySelectorAll('button').forEach(x=>x.setAttribute('aria-selected',x===b));renderActive()});
 }
@@ -1927,19 +1968,19 @@ function plObj(s=PL.sel){if(!s)return null;return s.k==='iw'?P.walls[s.i]:s.k===
 function renderPlan(){
   const el=$('#tab-plan');
   if(!el.dataset.ready){
-    el.innerHTML=`<div class="sec-head"><h2>План дома — архитектурные решения</h2></div>
-      <p class="lead">Рисуйте прямо на плане: тяните стены, перегородки, окна и двери мышью. Фундамент, каркас, кровлю и расчёт программа строит сама по этому плану.</p>
-      <div class="pl-bar" role="toolbar" aria-label="Инструменты плана">${PL_TOOLS.map(([k,l,i])=>`<button class="btn sm" data-tool="${k}" aria-pressed="${PL.tool===k}"><span aria-hidden="true">${i}</span> ${l}</button>`).join('')}
-        <label class="pl-snap">Шаг <select id="plSnap">${[10,50,100,500].map(v=>`<option${v===PL.snap?' selected':''}>${v}</option>`).join('')}</select> мм</label>
-        <button class="btn sm" id="plFit">Весь план</button><button class="btn sm pri" id="pl3d">Посмотреть в 3D</button></div>
-      <div class="pl-wrap"><svg id="plSvg" role="img" aria-label="План дома, редактируемый мышью"></svg><div class="pl-side"><div id="plProps"></div><p class="pl-help" id="plHelp"></p></div></div>`;
+    const IC={sel:'M5 3l11 7.5-5 1.2-2.3 5.3z',iw:'M10 2v16M6 2h8M6 18h8',window:'M3 5h14v10H3zM3 10h14M10 5v10',door:'M4 17V3h5a8 8 0 0 1 8 8v6M4 17h13',wing:'M3 3h8v8H3zM11 9h6v8h-6M3 11v6h8',furn:'M3 9h14v6H3zM5 9V6h10v3M4 15v2M16 15v2',ruler:'M2.5 14.5 14.5 2.5l3 3-12 12zM6 11l1.5 1.5M8.5 8.5 10 10M11 6l1.5 1.5'};
+    el.innerHTML=`<div class="pl-wrap"><div class="pl-stage" id="plStage"><svg id="plSvg" role="img" aria-label="План дома, редактируемый мышью"></svg><svg class="pl-rul pl-rx" id="plRx" aria-hidden="true"></svg><svg class="pl-rul pl-ry" id="plRy" aria-hidden="true"></svg><div class="pl-corner" aria-hidden="true">м</div>
+        <div class="pl-tools" role="toolbar" aria-label="Инструменты плана">${PL_TOOLS.map(([k,l])=>`<button class="pl-tool" data-tool="${k}" aria-pressed="${PL.tool===k}" title="${l}" aria-label="${l}"><svg viewBox="0 0 20 20"><path d="${IC[k]||''}"/></svg></button>`).join('')}</div>
+        <div class="pl-view"><button class="btn sm" id="plFit">Весь план</button><button class="btn sm pri" id="pl3d">Посмотреть в 3D</button></div></div>
+        <div class="pl-side"><div id="plProps"></div><p class="pl-help" id="plHelp"></p></div></div>
+      <div class="pl-status"><label>Шаг привязки <select id="plSnap">${[10,50,100,500].map(v=>`<option${v===PL.snap?' selected':''}>${v}</option>`).join('')}</select> мм</label><span id="plCur"></span><span class="pl-keys">Delete — удалить · R — повернуть · Esc — отменить · колесо — масштаб</span></div>`;
     el.dataset.ready='1';
     el.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>plSetTool(b.dataset.tool));
     $('#plSnap').onchange=e=>PL.snap=+e.target.value;
     $('#plFit').onclick=()=>{PL.user=false;plDraw()};
-    $('#pl3d').onclick=()=>{V3='house';const t3=$('#tab-3d');if(t3.dataset.ready){t3.querySelectorAll('[data-v3]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v3===V3));$('#layers').hidden=true;$('#layersAr').hidden=false}curTab='3d';$('#tabs').querySelectorAll('button').forEach(x=>x.setAttribute('aria-selected',x.dataset.t==='3d'));renderActive();if(R3)applyLayers()};
+    $('#pl3d').onclick=()=>{V3='house';const t3=$('#tab-3d');if(t3.dataset.ready){t3.querySelectorAll('[data-v3]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v3===V3));$('#layers').hidden=true;$('#layersAr').hidden=false}setStep(stepOf(curStep).tabs.includes('3d')?curStep:'ar','3d');if(R3)applyLayers()};
     const svg=$('#plSvg');
-    svg.addEventListener('pointerdown',plDown);svg.addEventListener('pointermove',plMove);svg.addEventListener('pointerup',plUp);svg.addEventListener('pointercancel',plUp);
+    svg.addEventListener('pointerdown',plDown);svg.addEventListener('pointermove',e=>{const p=plPt(e),c=$('#plCur');if(c)c.innerHTML=`X <b>${fmt(plSnap(p.x))}</b> Y <b>${fmt(plSnap(p.y))}</b> мм`});svg.addEventListener('pointermove',plMove);svg.addEventListener('pointerup',plUp);svg.addEventListener('pointercancel',plUp);
     svg.addEventListener('wheel',e=>{e.preventDefault();const p=plPt(e),f=e.deltaY>0?1.15:1/1.15,v=PL.view;v.x=p.x-(p.x-v.x)*f;v.y=-p.y-(-p.y-v.y)*f;v.w*=f;v.h*=f;PL.user=true;plDraw()},{passive:false});
     window.addEventListener('resize',()=>{if(curTab==='plan')plDraw()});
     document.addEventListener('keydown',e=>{if(curTab!=='plan'||/INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName||''))return;
@@ -1955,26 +1996,27 @@ function plDraw(){
   const svg=$('#plSvg');if(!svg||!M)return;if(!PL.view||(!PL.user&&!PL.drag))plFit();
   const v=PL.view,cw=svg.clientWidth||800,ch=svg.clientHeight||500,k=Math.max(v.w/cw,v.h/ch),fs=12*k,Y=y=>-y;
   svg.setAttribute('viewBox',`${v.x} ${v.y} ${v.w} ${v.h}`);
-  const sel=PL.sel,hl='#2D6A4F';let g=`<defs><pattern id="plG" width="500" height="500" patternUnits="userSpaceOnUse"><path d="M500 0H0V500" fill="none" stroke="#E2E7E3" stroke-width="${k}"/></pattern><pattern id="plG2" width="1000" height="1000" patternUnits="userSpaceOnUse"><path d="M1000 0H0V1000" fill="none" stroke="#CDD5CF" stroke-width="${k}"/></pattern></defs>`;
+  const cv=k2=>getComputedStyle(document.documentElement).getPropertyValue(k2).trim(),T={wall:cv('--wall'),tim:cv('--timber'),ink:cv('--ink'),mut:cv('--muted'),pan:cv('--panel'),soft:cv('--soft'),can:cv('--canvas'),line:cv('--line'),acc:cv('--accent'),bad:cv('--bad')};PL.T=T;
+  const sel=PL.sel,hl=T.acc;let g=`<defs><pattern id="plG" width="500" height="500" patternUnits="userSpaceOnUse"><path d="M500 0H0V500" fill="none" stroke="${T.line}" stroke-opacity=".55" stroke-width="${k}"/></pattern><pattern id="plG2" width="1000" height="1000" patternUnits="userSpaceOnUse"><path d="M1000 0H0V1000" fill="none" stroke="${T.line}" stroke-width="${k}"/></pattern></defs>`;
   g+=`<rect x="${v.x-v.w}" y="${v.y-v.h}" width="${v.w*3}" height="${v.h*3}" fill="url(#plG)"/><rect x="${v.x-v.w}" y="${v.y-v.h}" width="${v.w*3}" height="${v.h*3}" fill="url(#plG2)"/>`;
   /* помещения */
-  (M.rooms||[]).forEach((r,i)=>{const on=sel?.k==='room'&&sel.i===i,fill=r.kind==='living'?'#EEF4EC':r.kind==='tech'?'#F5EFE6':'#F3F4F2';
-    r.cells.forEach(c=>g+=`<rect data-k="room" data-i="${i}" x="${c[0]}" y="${Y(c[3])}" width="${c[2]-c[0]}" height="${c[3]-c[1]}" fill="${on?'#DCEBDD':fill}" stroke="none"/>`)});
+  (M.rooms||[]).forEach((r,i)=>{const on=sel?.k==='room'&&sel.i===i,fill=r.kind==='living'?T.pan:T.soft;
+    r.cells.forEach(c=>g+=`<rect data-k="room" data-i="${i}" x="${c[0]}" y="${Y(c[3])}" width="${c[2]-c[0]}" height="${c[3]-c[1]}" fill="${on?'#FFF1C2':fill}" stroke="none"/>`)});
   /* мебель и оборудование */
-  (P.furn||[]).forEach((f,i)=>{const on=sel?.k==='furn'&&sel.i===i,col=on?hl:'#5B6862',sw=(on?2:1)*k,[fx0,fy0,fx1,fy1]=furnFoot(f);
-    g+=`<g data-k="furn" data-i="${i}" style="cursor:move"><rect x="${fx0}" y="${Y(fy1)}" width="${fx1-fx0}" height="${fy1-fy0}" fill="${on?'#E4EFE6':'#FFFFFF'}" fill-opacity=".85" stroke="none"/>`;
+  (P.furn||[]).forEach((f,i)=>{const on=sel?.k==='furn'&&sel.i===i,col=on?T.tim:T.mut,sw=(on?2:1)*k,[fx0,fy0,fx1,fy1]=furnFoot(f);
+    g+=`<g data-k="furn" data-i="${i}" style="cursor:move"><rect x="${fx0}" y="${Y(fy1)}" width="${fx1-fx0}" height="${fy1-fy0}" fill="${on?'#FFF1C2':T.pan}" fill-opacity=".85" stroke="none"/>`;
     furnPrims(f).forEach(q=>{g+=q[0]==='r'?`<rect x="${q[1]}" y="${Y(q[4])}" width="${q[3]-q[1]}" height="${q[4]-q[2]}" fill="none" stroke="${col}" stroke-width="${sw}"/>`:q[0]==='c'?`<circle cx="${q[1]}" cy="${Y(q[2])}" r="${q[3]}" fill="none" stroke="${col}" stroke-width="${sw}"/>`:`<line x1="${q[1]}" y1="${Y(q[2])}" x2="${q[3]}" y2="${Y(q[4])}" stroke="${col}" stroke-width="${sw}"/>`});
-    if(on)g+=`<text x="${f.x}" y="${Y(fy1)-4*k}" font-size="${fs*.85}" text-anchor="middle" fill="${hl}">${esc(FURN[f.t]?.n||'')}</text>`;g+='</g>'});
+    if(on)g+=`<text x="${f.x}" y="${Y(fy1)-4*k}" font-size="${fs*.85}" text-anchor="middle" fill="${T.tim}">${esc(FURN[f.t]?.n||'')}</text>`;g+='</g>'});
   /* стены */
   const WL=M.walls.filter(w=>w.zb==null);
   WL.forEach(w=>{const [x0,y0,x1,y1]=plWR(w),iw=!w.ext,on=(sel?.k==='iw'&&iw&&w.id==='I'+(sel.i+1))||(sel?.k==='ext'&&sel.id===w.id)||(sel?.k==='wing'&&w.wing===sel.i);
     const cur=iw?(w.ux?'ns-resize':'ew-resize'):(w.ux?'ns-resize':'ew-resize');
-    g+=`<rect data-k="${iw?'iw':'ext'}" data-id="${w.id}" x="${x0}" y="${Y(y1)}" width="${x1-x0}" height="${y1-y0}" fill="${on?hl:iw?(w.bearing?'#6E7B74':'#9AA59F'):'#2B332F'}" stroke="none" style="cursor:${cur}"/>`});
+    g+=`<rect data-k="${iw?'iw':'ext'}" data-id="${w.id}" x="${x0}" y="${Y(y1)}" width="${x1-x0}" height="${y1-y0}" fill="${on?hl:iw?(w.bearing?T.tim:T.mut):T.wall}" stroke="none" style="cursor:${cur}"/>`});
   /* проёмы */
   M.ops.forEach(o=>{const w=plWallById(o.wall);if(!w)return;const a=o.x,e=o.x+o.w,on=sel?.k==='op'&&sel.i===o.i;let x0,y0,x1,y1;
     if(w.ux){x0=w.x0+a;x1=w.x0+e;y0=w.y0-w.d/2;y1=w.y0+w.d/2}else{y0=w.y0+a;y1=w.y0+e;x0=w.x0-w.d/2;x1=w.x0+w.d/2}
-    const col=!o.ok?'#BE3B28':on?hl:'#2B332F';
-    g+=`<g data-k="op" data-i="${o.i}" style="cursor:${w.ux?'ew-resize':'ns-resize'}"><rect x="${x0}" y="${Y(y1)}" width="${x1-x0}" height="${y1-y0}" fill="#fff" stroke="${col}" stroke-width="${(on?2.5:1.2)*k}"/>`;
+    const col=!o.ok?T.bad:on?T.tim:T.wall;
+    g+=`<g data-k="op" data-i="${o.i}" style="cursor:${w.ux?'ew-resize':'ns-resize'}"><rect x="${x0}" y="${Y(y1)}" width="${x1-x0}" height="${y1-y0}" fill="${T.can}" stroke="${col}" stroke-width="${(on?2.5:1.2)*k}"/>`;
     if(o.type==='window')g+=w.ux?`<line x1="${x0}" y1="${Y(w.y0)}" x2="${x1}" y2="${Y(w.y0)}" stroke="${col}" stroke-width="${1.2*k}"/>`:`<line x1="${w.x0}" y1="${Y(y0)}" x2="${w.x0}" y2="${Y(y1)}" stroke="${col}" stroke-width="${1.2*k}"/>`;
     else{const inw=w.inw||{W1:[0,1],W3:[0,-1],W2:[-1,0],W4:[1,0]}[w.id]||[-w.uy,w.ux],r=o.w;
       if(w.ux){const yb=w.y0+inw[1]*w.d/2,ye=yb+inw[1]*r;g+=`<path d="M${x0} ${Y(yb)}L${x0} ${Y(ye)}A${r} ${r} 0 0 ${inw[1]>0?1:0} ${x1} ${Y(yb)}" fill="none" stroke="${col}" stroke-width="${k}"/>`}
@@ -1983,23 +2025,30 @@ function plDraw(){
     g+=w.ux?`<text x="${(x0+x1)/2}" y="${Y(w.y0+nO[1]*gap)+(nO[1]<0?fs*.8:0)}" font-size="${fs*.85}" text-anchor="middle" fill="${col}">${o.mark||'!'}</text></g>`
       :`<text x="${w.x0+nO[0]*gap}" y="${Y((y0+y1)/2)+fs*.3}" font-size="${fs*.85}" text-anchor="${nO[0]<0?'end':'start'}" fill="${col}">${o.mark||'!'}</text></g>`});
   /* подписи помещений */
-  (M.rooms||[]).forEach((r,i)=>{g+=`<text data-k="room" data-i="${i}" x="${r.x}" y="${Y(r.y)}" font-size="${fs}" text-anchor="middle" fill="#17201C">${esc(r.name)}</text><text data-k="room" data-i="${i}" x="${r.x}" y="${Y(r.y)+fs*1.3}" font-size="${fs*.95}" text-anchor="middle" fill="#2D6A4F" font-weight="600">${fmt(r.area,1)} м²</text>`;
-    if(Math.abs((r.x1-r.x0)*(r.y1-r.y0)/1e6-r.area)<.05)g+=`<text data-k="room" data-i="${i}" x="${r.x}" y="${Y(r.y)+fs*2.5}" font-size="${fs*.8}" text-anchor="middle" fill="#5B6862">${fmt((r.x1-r.x0)/1000,2)} × ${fmt((r.y1-r.y0)/1000,2)} м</text>`});
+  (M.rooms||[]).forEach((r,i)=>{g+=`<text data-k="room" data-i="${i}" x="${r.x}" y="${Y(r.y)}" font-size="${fs}" text-anchor="middle" fill="${T.ink}">${esc(r.name)}</text><text data-k="room" data-i="${i}" x="${r.x}" y="${Y(r.y)+fs*1.3}" font-size="${fs*.95}" text-anchor="middle" fill="${T.tim}" font-weight="600">${fmt(r.area,1)} м²</text>`;
+    if(Math.abs((r.x1-r.x0)*(r.y1-r.y0)/1e6-r.area)<.05)g+=`<text data-k="room" data-i="${i}" x="${r.x}" y="${Y(r.y)+fs*2.5}" font-size="${fs*.8}" text-anchor="middle" fill="${T.mut}">${fmt((r.x1-r.x0)/1000,2)} × ${fmt((r.y1-r.y0)/1000,2)} м</text>`});
   /* размеры */
   const AX=M.AX||M.A,BY=M.BY||M.B,X0=M.X0||0,Y0=M.Y0||0;
   g+=plDim(X0,Y0,AX,Y0,-900,k,fs)+plDim(X0,Y0,X0,BY,-900,k,fs,true);
-  if(sel?.k==='iw'){const o=P.walls[sel.i];if(o){[['from',o.from],['to',o.to]].forEach(([e,u])=>{const x=o.axis==='x'?u:o.c,y=o.axis==='x'?o.c:u;g+=`<circle data-k="iwEnd" data-i="${sel.i}" data-e="${e}" cx="${x}" cy="${Y(y)}" r="${6*k}" fill="#fff" stroke="${hl}" stroke-width="${2*k}" style="cursor:move"/>`});g+=plIwDims(sel.i,k,fs)}}
+  if(sel?.k==='iw'){const o=P.walls[sel.i];if(o){[['from',o.from],['to',o.to]].forEach(([e,u])=>{const x=o.axis==='x'?u:o.c,y=o.axis==='x'?o.c:u;g+=`<circle data-k="iwEnd" data-i="${sel.i}" data-e="${e}" cx="${x}" cy="${Y(y)}" r="${6*k}" fill="#fff" stroke="${T.tim}" stroke-width="${2*k}" style="cursor:move"/>`});g+=plIwDims(sel.i,k,fs)}}
   if(sel?.k==='op'){const o=M.ops[sel.i],w=o&&plWallById(o.wall);if(w){const out=(w.inw?-1:1)*0,sg=-1,base=w.ux?w.y0:w.x0;const n=w.inw?[-w.inw[0],-w.inw[1]]:({W1:[0,-1],W3:[0,1],W2:[1,0],W4:[-1,0]}[w.id]||[w.uy,-w.ux]);
     const off=(w.d/2+600)*(w.ux?n[1]:n[0]),P0=u=>w.ux?[w.x0+u,w.y0]:[w.x0,w.y0+u];[[0,o.x],[o.x,o.x+o.w],[o.x+o.w,w.L]].forEach(([a,b])=>{if(b-a<1)return;const p=P0(a),q=P0(b);g+=plDim(p[0],p[1],q[0],q[1],off,k,fs,!w.ux)})}}
   if(PL.drag?.k==='newiw'&&PL.drag.p1){const d=PL.drag,ln=plNewIw(d.p0,d.p1);if(ln){const x0=ln.axis==='x'?ln.from:ln.c,x1=ln.axis==='x'?ln.to:ln.c,y0=ln.axis==='x'?ln.c:ln.from,y1=ln.axis==='x'?ln.c:ln.to;
     g+=`<line x1="${x0}" y1="${Y(y0)}" x2="${x1}" y2="${Y(y1)}" stroke="${hl}" stroke-width="${+P.partH||100}" stroke-opacity=".55"/>`+plDim(x0,y0,x1,y1,ln.axis==='x'?400:-400,k,fs,ln.axis==='y')}}
-  if(PL.ruler?.p1){const a=PL.ruler.p0,b=PL.ruler.p1,L=R(Math.hypot(b.x-a.x,b.y-a.y));g+=`<line x1="${a.x}" y1="${Y(a.y)}" x2="${b.x}" y2="${Y(b.y)}" stroke="#B5772D" stroke-width="${2*k}" stroke-dasharray="${6*k} ${3*k}"/><circle cx="${a.x}" cy="${Y(a.y)}" r="${3*k}" fill="#B5772D"/><circle cx="${b.x}" cy="${Y(b.y)}" r="${3*k}" fill="#B5772D"/><text x="${(a.x+b.x)/2}" y="${Y((a.y+b.y)/2)-5*k}" font-size="${fs*1.1}" text-anchor="middle" fill="#B5772D" font-weight="700" paint-order="stroke" stroke="#fff" stroke-width="${3*k}">${L} мм</text>`}
-  svg.innerHTML=g;
+  if(PL.ruler?.p1){const a=PL.ruler.p0,b=PL.ruler.p1,L=R(Math.hypot(b.x-a.x,b.y-a.y));g+=`<line x1="${a.x}" y1="${Y(a.y)}" x2="${b.x}" y2="${Y(b.y)}" stroke="#8C5A2B" stroke-width="${2*k}" stroke-dasharray="${6*k} ${3*k}"/><circle cx="${a.x}" cy="${Y(a.y)}" r="${3*k}" fill="#8C5A2B"/><circle cx="${b.x}" cy="${Y(b.y)}" r="${3*k}" fill="#8C5A2B"/><text x="${(a.x+b.x)/2}" y="${Y((a.y+b.y)/2)-5*k}" font-size="${fs*1.1}" text-anchor="middle" fill="#8C5A2B" font-weight="700" paint-order="stroke" stroke="#fff" stroke-width="${3*k}">${L} мм</text>`}
+  svg.innerHTML=g;plRulers();
   svg.style.cursor=PL.tool==='sel'?'default':'crosshair';
   $('#plHelp').textContent=PL_HELP[PL.tool]||'';plProps();
 }
 /* размерная линия в координатах дома (мм); off — вынос, vert — вертикальная */
-function plDim(x0,y0,x1,y1,off,k,fs,vert){const Y=y=>-y,L=Math.round(Math.hypot(x1-x0,y1-y0));if(L<1)return '';const c='#5B6862',sw=k;
+/* мерная шкала по краям плана (метры от угла дома) */
+function plRulers(){const svg=$('#plSvg'),st=$('#plStage'),rx=$('#plRx'),ry=$('#plRy');if(!svg||!st||!rx)return;const m=svg.getScreenCTM();if(!m)return;const b=st.getBoundingClientRect(),W=b.width,H=b.height,ppm=m.a;
+  const M=[500,1000,2000,5000,10000].find(v=>v*ppm>=46)||10000,mi=M/10*ppm>=4?M/10:M/2,T=PL.T||{ink:'#1F1B16',mut:'#6B6458'},lab=v=>(v/1000).toLocaleString('ru-RU',{maximumFractionDigits:1});
+  let gx='',gy='';const X=x=>m.a*x+m.e-b.left,Yp=y=>m.d*(-y)+m.f-b.top,x0=(b.left-m.e)/m.a,x1=(b.left+W-m.e)/m.a,yA=-(b.top+H-m.f)/m.d,yB=-(b.top-m.f)/m.d;
+  for(let x=Math.ceil(x0/mi)*mi;x<=x1;x+=mi){const px=X(x),maj=Math.abs(x/M-Math.round(x/M))<1e-6;if(px<28)continue;gx+=`<line x1="${px}" y1="${maj?10:20}" x2="${px}" y2="28" stroke="${maj?T.ink:T.mut}" stroke-width="${maj?1:.6}"/>`+(maj?`<text x="${px+3}" y="11" font-size="10.5" font-weight="600" fill="${T.ink}">${lab(x)}</text>`:'')}
+  for(let y=Math.ceil(yA/mi)*mi;y<=yB;y+=mi){const py=Yp(y),maj=Math.abs(y/M-Math.round(y/M))<1e-6;if(py<28)continue;gy+=`<line y1="${py}" x1="${maj?10:20}" y2="${py}" x2="28" stroke="${maj?T.ink:T.mut}" stroke-width="${maj?1:.6}"/>`+(maj?`<text x="11" y="${py-3}" font-size="10.5" font-weight="600" fill="${T.ink}" transform="rotate(-90 11 ${py-3})">${lab(y)}</text>`:'')}
+  rx.innerHTML=gx;ry.innerHTML=gy}
+function plDim(x0,y0,x1,y1,off,k,fs,vert){const Y=y=>-y,L=Math.round(Math.hypot(x1-x0,y1-y0));if(L<1)return '';const c=PL.T?.mut||'#6B6458',sw=k;
   if(!vert){const y=y0+off;return `<g stroke="${c}" stroke-width="${sw}"><line x1="${x0}" y1="${Y(y0)}" x2="${x0}" y2="${Y(y)}"/><line x1="${x1}" y1="${Y(y1)}" x2="${x1}" y2="${Y(y)}"/><line x1="${x0}" y1="${Y(y)}" x2="${x1}" y2="${Y(y)}"/><line x1="${x0-4*k}" y1="${Y(y)+4*k}" x2="${x0+4*k}" y2="${Y(y)-4*k}" stroke-width="${2*k}"/><line x1="${x1-4*k}" y1="${Y(y)+4*k}" x2="${x1+4*k}" y2="${Y(y)-4*k}" stroke-width="${2*k}"/></g><text x="${(x0+x1)/2}" y="${Y(y)-3*k}" font-size="${fs*.9}" text-anchor="middle" fill="${c}">${L}</text>`}
   const x=x0+off;return `<g stroke="${c}" stroke-width="${sw}"><line x1="${x0}" y1="${Y(y0)}" x2="${x}" y2="${Y(y0)}"/><line x1="${x1}" y1="${Y(y1)}" x2="${x}" y2="${Y(y1)}"/><line x1="${x}" y1="${Y(y0)}" x2="${x}" y2="${Y(y1)}"/><line x1="${x-4*k}" y1="${Y(y0)+4*k}" x2="${x+4*k}" y2="${Y(y0)-4*k}" stroke-width="${2*k}"/><line x1="${x-4*k}" y1="${Y(y1)+4*k}" x2="${x+4*k}" y2="${Y(y1)-4*k}" stroke-width="${2*k}"/></g><text x="${x-3*k}" y="${Y((y0+y1)/2)}" font-size="${fs*.9}" text-anchor="middle" fill="${c}" transform="rotate(-90 ${x-3*k} ${Y((y0+y1)/2)})">${L}</text>`}
 /* до соседних параллельных стен в чистоте */
@@ -2942,7 +2991,8 @@ function renderKB(){
 }
 
 /* ---------- старт ---------- */
-renderSide(); renderTabs(); rebuild();
+renderSteps(); renderSide(); renderTabs(); rebuild();
+$('#helpBtn').onclick=()=>{curTab='kb';renderTabs();renderActive()};
 $('#undo').onclick=()=>undoRedo(-1);$('#redo').onclick=()=>undoRedo(1);updUndo();
 window.addEventListener('beforeprint',()=>{if(!$('#print-area').innerHTML&&IS_LOCAL&&M){}});
 </script>

@@ -15,19 +15,19 @@ function plObj(s=PL.sel){if(!s)return null;return s.k==='iw'?P.walls[s.i]:s.k===
 function renderPlan(){
   const el=$('#tab-plan');
   if(!el.dataset.ready){
-    el.innerHTML=`<div class="sec-head"><h2>План дома — архитектурные решения</h2></div>
-      <p class="lead">Рисуйте прямо на плане: тяните стены, перегородки, окна и двери мышью. Фундамент, каркас, кровлю и расчёт программа строит сама по этому плану.</p>
-      <div class="pl-bar" role="toolbar" aria-label="Инструменты плана">${PL_TOOLS.map(([k,l,i])=>`<button class="btn sm" data-tool="${k}" aria-pressed="${PL.tool===k}"><span aria-hidden="true">${i}</span> ${l}</button>`).join('')}
-        <label class="pl-snap">Шаг <select id="plSnap">${[10,50,100,500].map(v=>`<option${v===PL.snap?' selected':''}>${v}</option>`).join('')}</select> мм</label>
-        <button class="btn sm" id="plFit">Весь план</button><button class="btn sm pri" id="pl3d">Посмотреть в 3D</button></div>
-      <div class="pl-wrap"><svg id="plSvg" role="img" aria-label="План дома, редактируемый мышью"></svg><div class="pl-side"><div id="plProps"></div><p class="pl-help" id="plHelp"></p></div></div>`;
+    const IC={sel:'M5 3l11 7.5-5 1.2-2.3 5.3z',iw:'M10 2v16M6 2h8M6 18h8',window:'M3 5h14v10H3zM3 10h14M10 5v10',door:'M4 17V3h5a8 8 0 0 1 8 8v6M4 17h13',wing:'M3 3h8v8H3zM11 9h6v8h-6M3 11v6h8',furn:'M3 9h14v6H3zM5 9V6h10v3M4 15v2M16 15v2',ruler:'M2.5 14.5 14.5 2.5l3 3-12 12zM6 11l1.5 1.5M8.5 8.5 10 10M11 6l1.5 1.5'};
+    el.innerHTML=`<div class="pl-wrap"><div class="pl-stage" id="plStage"><svg id="plSvg" role="img" aria-label="План дома, редактируемый мышью"></svg><svg class="pl-rul pl-rx" id="plRx" aria-hidden="true"></svg><svg class="pl-rul pl-ry" id="plRy" aria-hidden="true"></svg><div class="pl-corner" aria-hidden="true">м</div>
+        <div class="pl-tools" role="toolbar" aria-label="Инструменты плана">${PL_TOOLS.map(([k,l])=>`<button class="pl-tool" data-tool="${k}" aria-pressed="${PL.tool===k}" title="${l}" aria-label="${l}"><svg viewBox="0 0 20 20"><path d="${IC[k]||''}"/></svg></button>`).join('')}</div>
+        <div class="pl-view"><button class="btn sm" id="plFit">Весь план</button><button class="btn sm pri" id="pl3d">Посмотреть в 3D</button></div></div>
+        <div class="pl-side"><div id="plProps"></div><p class="pl-help" id="plHelp"></p></div></div>
+      <div class="pl-status"><label>Шаг привязки <select id="plSnap">${[10,50,100,500].map(v=>`<option${v===PL.snap?' selected':''}>${v}</option>`).join('')}</select> мм</label><span id="plCur"></span><span class="pl-keys">Delete — удалить · R — повернуть · Esc — отменить · колесо — масштаб</span></div>`;
     el.dataset.ready='1';
     el.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>plSetTool(b.dataset.tool));
     $('#plSnap').onchange=e=>PL.snap=+e.target.value;
     $('#plFit').onclick=()=>{PL.user=false;plDraw()};
-    $('#pl3d').onclick=()=>{V3='house';const t3=$('#tab-3d');if(t3.dataset.ready){t3.querySelectorAll('[data-v3]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v3===V3));$('#layers').hidden=true;$('#layersAr').hidden=false}curTab='3d';$('#tabs').querySelectorAll('button').forEach(x=>x.setAttribute('aria-selected',x.dataset.t==='3d'));renderActive();if(R3)applyLayers()};
+    $('#pl3d').onclick=()=>{V3='house';const t3=$('#tab-3d');if(t3.dataset.ready){t3.querySelectorAll('[data-v3]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v3===V3));$('#layers').hidden=true;$('#layersAr').hidden=false}setStep(stepOf(curStep).tabs.includes('3d')?curStep:'ar','3d');if(R3)applyLayers()};
     const svg=$('#plSvg');
-    svg.addEventListener('pointerdown',plDown);svg.addEventListener('pointermove',plMove);svg.addEventListener('pointerup',plUp);svg.addEventListener('pointercancel',plUp);
+    svg.addEventListener('pointerdown',plDown);svg.addEventListener('pointermove',e=>{const p=plPt(e),c=$('#plCur');if(c)c.innerHTML=`X <b>${fmt(plSnap(p.x))}</b> Y <b>${fmt(plSnap(p.y))}</b> мм`});svg.addEventListener('pointermove',plMove);svg.addEventListener('pointerup',plUp);svg.addEventListener('pointercancel',plUp);
     svg.addEventListener('wheel',e=>{e.preventDefault();const p=plPt(e),f=e.deltaY>0?1.15:1/1.15,v=PL.view;v.x=p.x-(p.x-v.x)*f;v.y=-p.y-(-p.y-v.y)*f;v.w*=f;v.h*=f;PL.user=true;plDraw()},{passive:false});
     window.addEventListener('resize',()=>{if(curTab==='plan')plDraw()});
     document.addEventListener('keydown',e=>{if(curTab!=='plan'||/INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName||''))return;
@@ -43,26 +43,27 @@ function plDraw(){
   const svg=$('#plSvg');if(!svg||!M)return;if(!PL.view||(!PL.user&&!PL.drag))plFit();
   const v=PL.view,cw=svg.clientWidth||800,ch=svg.clientHeight||500,k=Math.max(v.w/cw,v.h/ch),fs=12*k,Y=y=>-y;
   svg.setAttribute('viewBox',`${v.x} ${v.y} ${v.w} ${v.h}`);
-  const sel=PL.sel,hl='#2D6A4F';let g=`<defs><pattern id="plG" width="500" height="500" patternUnits="userSpaceOnUse"><path d="M500 0H0V500" fill="none" stroke="#E2E7E3" stroke-width="${k}"/></pattern><pattern id="plG2" width="1000" height="1000" patternUnits="userSpaceOnUse"><path d="M1000 0H0V1000" fill="none" stroke="#CDD5CF" stroke-width="${k}"/></pattern></defs>`;
+  const cv=k2=>getComputedStyle(document.documentElement).getPropertyValue(k2).trim(),T={wall:cv('--wall'),tim:cv('--timber'),ink:cv('--ink'),mut:cv('--muted'),pan:cv('--panel'),soft:cv('--soft'),can:cv('--canvas'),line:cv('--line'),acc:cv('--accent'),bad:cv('--bad')};PL.T=T;
+  const sel=PL.sel,hl=T.acc;let g=`<defs><pattern id="plG" width="500" height="500" patternUnits="userSpaceOnUse"><path d="M500 0H0V500" fill="none" stroke="${T.line}" stroke-opacity=".55" stroke-width="${k}"/></pattern><pattern id="plG2" width="1000" height="1000" patternUnits="userSpaceOnUse"><path d="M1000 0H0V1000" fill="none" stroke="${T.line}" stroke-width="${k}"/></pattern></defs>`;
   g+=`<rect x="${v.x-v.w}" y="${v.y-v.h}" width="${v.w*3}" height="${v.h*3}" fill="url(#plG)"/><rect x="${v.x-v.w}" y="${v.y-v.h}" width="${v.w*3}" height="${v.h*3}" fill="url(#plG2)"/>`;
   /* помещения */
-  (M.rooms||[]).forEach((r,i)=>{const on=sel?.k==='room'&&sel.i===i,fill=r.kind==='living'?'#EEF4EC':r.kind==='tech'?'#F5EFE6':'#F3F4F2';
-    r.cells.forEach(c=>g+=`<rect data-k="room" data-i="${i}" x="${c[0]}" y="${Y(c[3])}" width="${c[2]-c[0]}" height="${c[3]-c[1]}" fill="${on?'#DCEBDD':fill}" stroke="none"/>`)});
+  (M.rooms||[]).forEach((r,i)=>{const on=sel?.k==='room'&&sel.i===i,fill=r.kind==='living'?T.pan:T.soft;
+    r.cells.forEach(c=>g+=`<rect data-k="room" data-i="${i}" x="${c[0]}" y="${Y(c[3])}" width="${c[2]-c[0]}" height="${c[3]-c[1]}" fill="${on?'#FFF1C2':fill}" stroke="none"/>`)});
   /* мебель и оборудование */
-  (P.furn||[]).forEach((f,i)=>{const on=sel?.k==='furn'&&sel.i===i,col=on?hl:'#5B6862',sw=(on?2:1)*k,[fx0,fy0,fx1,fy1]=furnFoot(f);
-    g+=`<g data-k="furn" data-i="${i}" style="cursor:move"><rect x="${fx0}" y="${Y(fy1)}" width="${fx1-fx0}" height="${fy1-fy0}" fill="${on?'#E4EFE6':'#FFFFFF'}" fill-opacity=".85" stroke="none"/>`;
+  (P.furn||[]).forEach((f,i)=>{const on=sel?.k==='furn'&&sel.i===i,col=on?T.tim:T.mut,sw=(on?2:1)*k,[fx0,fy0,fx1,fy1]=furnFoot(f);
+    g+=`<g data-k="furn" data-i="${i}" style="cursor:move"><rect x="${fx0}" y="${Y(fy1)}" width="${fx1-fx0}" height="${fy1-fy0}" fill="${on?'#FFF1C2':T.pan}" fill-opacity=".85" stroke="none"/>`;
     furnPrims(f).forEach(q=>{g+=q[0]==='r'?`<rect x="${q[1]}" y="${Y(q[4])}" width="${q[3]-q[1]}" height="${q[4]-q[2]}" fill="none" stroke="${col}" stroke-width="${sw}"/>`:q[0]==='c'?`<circle cx="${q[1]}" cy="${Y(q[2])}" r="${q[3]}" fill="none" stroke="${col}" stroke-width="${sw}"/>`:`<line x1="${q[1]}" y1="${Y(q[2])}" x2="${q[3]}" y2="${Y(q[4])}" stroke="${col}" stroke-width="${sw}"/>`});
-    if(on)g+=`<text x="${f.x}" y="${Y(fy1)-4*k}" font-size="${fs*.85}" text-anchor="middle" fill="${hl}">${esc(FURN[f.t]?.n||'')}</text>`;g+='</g>'});
+    if(on)g+=`<text x="${f.x}" y="${Y(fy1)-4*k}" font-size="${fs*.85}" text-anchor="middle" fill="${T.tim}">${esc(FURN[f.t]?.n||'')}</text>`;g+='</g>'});
   /* стены */
   const WL=M.walls.filter(w=>w.zb==null);
   WL.forEach(w=>{const [x0,y0,x1,y1]=plWR(w),iw=!w.ext,on=(sel?.k==='iw'&&iw&&w.id==='I'+(sel.i+1))||(sel?.k==='ext'&&sel.id===w.id)||(sel?.k==='wing'&&w.wing===sel.i);
     const cur=iw?(w.ux?'ns-resize':'ew-resize'):(w.ux?'ns-resize':'ew-resize');
-    g+=`<rect data-k="${iw?'iw':'ext'}" data-id="${w.id}" x="${x0}" y="${Y(y1)}" width="${x1-x0}" height="${y1-y0}" fill="${on?hl:iw?(w.bearing?'#6E7B74':'#9AA59F'):'#2B332F'}" stroke="none" style="cursor:${cur}"/>`});
+    g+=`<rect data-k="${iw?'iw':'ext'}" data-id="${w.id}" x="${x0}" y="${Y(y1)}" width="${x1-x0}" height="${y1-y0}" fill="${on?hl:iw?(w.bearing?T.tim:T.mut):T.wall}" stroke="none" style="cursor:${cur}"/>`});
   /* проёмы */
   M.ops.forEach(o=>{const w=plWallById(o.wall);if(!w)return;const a=o.x,e=o.x+o.w,on=sel?.k==='op'&&sel.i===o.i;let x0,y0,x1,y1;
     if(w.ux){x0=w.x0+a;x1=w.x0+e;y0=w.y0-w.d/2;y1=w.y0+w.d/2}else{y0=w.y0+a;y1=w.y0+e;x0=w.x0-w.d/2;x1=w.x0+w.d/2}
-    const col=!o.ok?'#BE3B28':on?hl:'#2B332F';
-    g+=`<g data-k="op" data-i="${o.i}" style="cursor:${w.ux?'ew-resize':'ns-resize'}"><rect x="${x0}" y="${Y(y1)}" width="${x1-x0}" height="${y1-y0}" fill="#fff" stroke="${col}" stroke-width="${(on?2.5:1.2)*k}"/>`;
+    const col=!o.ok?T.bad:on?T.tim:T.wall;
+    g+=`<g data-k="op" data-i="${o.i}" style="cursor:${w.ux?'ew-resize':'ns-resize'}"><rect x="${x0}" y="${Y(y1)}" width="${x1-x0}" height="${y1-y0}" fill="${T.can}" stroke="${col}" stroke-width="${(on?2.5:1.2)*k}"/>`;
     if(o.type==='window')g+=w.ux?`<line x1="${x0}" y1="${Y(w.y0)}" x2="${x1}" y2="${Y(w.y0)}" stroke="${col}" stroke-width="${1.2*k}"/>`:`<line x1="${w.x0}" y1="${Y(y0)}" x2="${w.x0}" y2="${Y(y1)}" stroke="${col}" stroke-width="${1.2*k}"/>`;
     else{const inw=w.inw||{W1:[0,1],W3:[0,-1],W2:[-1,0],W4:[1,0]}[w.id]||[-w.uy,w.ux],r=o.w;
       if(w.ux){const yb=w.y0+inw[1]*w.d/2,ye=yb+inw[1]*r;g+=`<path d="M${x0} ${Y(yb)}L${x0} ${Y(ye)}A${r} ${r} 0 0 ${inw[1]>0?1:0} ${x1} ${Y(yb)}" fill="none" stroke="${col}" stroke-width="${k}"/>`}
@@ -71,23 +72,30 @@ function plDraw(){
     g+=w.ux?`<text x="${(x0+x1)/2}" y="${Y(w.y0+nO[1]*gap)+(nO[1]<0?fs*.8:0)}" font-size="${fs*.85}" text-anchor="middle" fill="${col}">${o.mark||'!'}</text></g>`
       :`<text x="${w.x0+nO[0]*gap}" y="${Y((y0+y1)/2)+fs*.3}" font-size="${fs*.85}" text-anchor="${nO[0]<0?'end':'start'}" fill="${col}">${o.mark||'!'}</text></g>`});
   /* подписи помещений */
-  (M.rooms||[]).forEach((r,i)=>{g+=`<text data-k="room" data-i="${i}" x="${r.x}" y="${Y(r.y)}" font-size="${fs}" text-anchor="middle" fill="#17201C">${esc(r.name)}</text><text data-k="room" data-i="${i}" x="${r.x}" y="${Y(r.y)+fs*1.3}" font-size="${fs*.95}" text-anchor="middle" fill="#2D6A4F" font-weight="600">${fmt(r.area,1)} м²</text>`;
-    if(Math.abs((r.x1-r.x0)*(r.y1-r.y0)/1e6-r.area)<.05)g+=`<text data-k="room" data-i="${i}" x="${r.x}" y="${Y(r.y)+fs*2.5}" font-size="${fs*.8}" text-anchor="middle" fill="#5B6862">${fmt((r.x1-r.x0)/1000,2)} × ${fmt((r.y1-r.y0)/1000,2)} м</text>`});
+  (M.rooms||[]).forEach((r,i)=>{g+=`<text data-k="room" data-i="${i}" x="${r.x}" y="${Y(r.y)}" font-size="${fs}" text-anchor="middle" fill="${T.ink}">${esc(r.name)}</text><text data-k="room" data-i="${i}" x="${r.x}" y="${Y(r.y)+fs*1.3}" font-size="${fs*.95}" text-anchor="middle" fill="${T.tim}" font-weight="600">${fmt(r.area,1)} м²</text>`;
+    if(Math.abs((r.x1-r.x0)*(r.y1-r.y0)/1e6-r.area)<.05)g+=`<text data-k="room" data-i="${i}" x="${r.x}" y="${Y(r.y)+fs*2.5}" font-size="${fs*.8}" text-anchor="middle" fill="${T.mut}">${fmt((r.x1-r.x0)/1000,2)} × ${fmt((r.y1-r.y0)/1000,2)} м</text>`});
   /* размеры */
   const AX=M.AX||M.A,BY=M.BY||M.B,X0=M.X0||0,Y0=M.Y0||0;
   g+=plDim(X0,Y0,AX,Y0,-900,k,fs)+plDim(X0,Y0,X0,BY,-900,k,fs,true);
-  if(sel?.k==='iw'){const o=P.walls[sel.i];if(o){[['from',o.from],['to',o.to]].forEach(([e,u])=>{const x=o.axis==='x'?u:o.c,y=o.axis==='x'?o.c:u;g+=`<circle data-k="iwEnd" data-i="${sel.i}" data-e="${e}" cx="${x}" cy="${Y(y)}" r="${6*k}" fill="#fff" stroke="${hl}" stroke-width="${2*k}" style="cursor:move"/>`});g+=plIwDims(sel.i,k,fs)}}
+  if(sel?.k==='iw'){const o=P.walls[sel.i];if(o){[['from',o.from],['to',o.to]].forEach(([e,u])=>{const x=o.axis==='x'?u:o.c,y=o.axis==='x'?o.c:u;g+=`<circle data-k="iwEnd" data-i="${sel.i}" data-e="${e}" cx="${x}" cy="${Y(y)}" r="${6*k}" fill="#fff" stroke="${T.tim}" stroke-width="${2*k}" style="cursor:move"/>`});g+=plIwDims(sel.i,k,fs)}}
   if(sel?.k==='op'){const o=M.ops[sel.i],w=o&&plWallById(o.wall);if(w){const out=(w.inw?-1:1)*0,sg=-1,base=w.ux?w.y0:w.x0;const n=w.inw?[-w.inw[0],-w.inw[1]]:({W1:[0,-1],W3:[0,1],W2:[1,0],W4:[-1,0]}[w.id]||[w.uy,-w.ux]);
     const off=(w.d/2+600)*(w.ux?n[1]:n[0]),P0=u=>w.ux?[w.x0+u,w.y0]:[w.x0,w.y0+u];[[0,o.x],[o.x,o.x+o.w],[o.x+o.w,w.L]].forEach(([a,b])=>{if(b-a<1)return;const p=P0(a),q=P0(b);g+=plDim(p[0],p[1],q[0],q[1],off,k,fs,!w.ux)})}}
   if(PL.drag?.k==='newiw'&&PL.drag.p1){const d=PL.drag,ln=plNewIw(d.p0,d.p1);if(ln){const x0=ln.axis==='x'?ln.from:ln.c,x1=ln.axis==='x'?ln.to:ln.c,y0=ln.axis==='x'?ln.c:ln.from,y1=ln.axis==='x'?ln.c:ln.to;
     g+=`<line x1="${x0}" y1="${Y(y0)}" x2="${x1}" y2="${Y(y1)}" stroke="${hl}" stroke-width="${+P.partH||100}" stroke-opacity=".55"/>`+plDim(x0,y0,x1,y1,ln.axis==='x'?400:-400,k,fs,ln.axis==='y')}}
-  if(PL.ruler?.p1){const a=PL.ruler.p0,b=PL.ruler.p1,L=R(Math.hypot(b.x-a.x,b.y-a.y));g+=`<line x1="${a.x}" y1="${Y(a.y)}" x2="${b.x}" y2="${Y(b.y)}" stroke="#B5772D" stroke-width="${2*k}" stroke-dasharray="${6*k} ${3*k}"/><circle cx="${a.x}" cy="${Y(a.y)}" r="${3*k}" fill="#B5772D"/><circle cx="${b.x}" cy="${Y(b.y)}" r="${3*k}" fill="#B5772D"/><text x="${(a.x+b.x)/2}" y="${Y((a.y+b.y)/2)-5*k}" font-size="${fs*1.1}" text-anchor="middle" fill="#B5772D" font-weight="700" paint-order="stroke" stroke="#fff" stroke-width="${3*k}">${L} мм</text>`}
-  svg.innerHTML=g;
+  if(PL.ruler?.p1){const a=PL.ruler.p0,b=PL.ruler.p1,L=R(Math.hypot(b.x-a.x,b.y-a.y));g+=`<line x1="${a.x}" y1="${Y(a.y)}" x2="${b.x}" y2="${Y(b.y)}" stroke="#8C5A2B" stroke-width="${2*k}" stroke-dasharray="${6*k} ${3*k}"/><circle cx="${a.x}" cy="${Y(a.y)}" r="${3*k}" fill="#8C5A2B"/><circle cx="${b.x}" cy="${Y(b.y)}" r="${3*k}" fill="#8C5A2B"/><text x="${(a.x+b.x)/2}" y="${Y((a.y+b.y)/2)-5*k}" font-size="${fs*1.1}" text-anchor="middle" fill="#8C5A2B" font-weight="700" paint-order="stroke" stroke="#fff" stroke-width="${3*k}">${L} мм</text>`}
+  svg.innerHTML=g;plRulers();
   svg.style.cursor=PL.tool==='sel'?'default':'crosshair';
   $('#plHelp').textContent=PL_HELP[PL.tool]||'';plProps();
 }
 /* размерная линия в координатах дома (мм); off — вынос, vert — вертикальная */
-function plDim(x0,y0,x1,y1,off,k,fs,vert){const Y=y=>-y,L=Math.round(Math.hypot(x1-x0,y1-y0));if(L<1)return '';const c='#5B6862',sw=k;
+/* мерная шкала по краям плана (метры от угла дома) */
+function plRulers(){const svg=$('#plSvg'),st=$('#plStage'),rx=$('#plRx'),ry=$('#plRy');if(!svg||!st||!rx)return;const m=svg.getScreenCTM();if(!m)return;const b=st.getBoundingClientRect(),W=b.width,H=b.height,ppm=m.a;
+  const M=[500,1000,2000,5000,10000].find(v=>v*ppm>=46)||10000,mi=M/10*ppm>=4?M/10:M/2,T=PL.T||{ink:'#1F1B16',mut:'#6B6458'},lab=v=>(v/1000).toLocaleString('ru-RU',{maximumFractionDigits:1});
+  let gx='',gy='';const X=x=>m.a*x+m.e-b.left,Yp=y=>m.d*(-y)+m.f-b.top,x0=(b.left-m.e)/m.a,x1=(b.left+W-m.e)/m.a,yA=-(b.top+H-m.f)/m.d,yB=-(b.top-m.f)/m.d;
+  for(let x=Math.ceil(x0/mi)*mi;x<=x1;x+=mi){const px=X(x),maj=Math.abs(x/M-Math.round(x/M))<1e-6;if(px<28)continue;gx+=`<line x1="${px}" y1="${maj?10:20}" x2="${px}" y2="28" stroke="${maj?T.ink:T.mut}" stroke-width="${maj?1:.6}"/>`+(maj?`<text x="${px+3}" y="11" font-size="10.5" font-weight="600" fill="${T.ink}">${lab(x)}</text>`:'')}
+  for(let y=Math.ceil(yA/mi)*mi;y<=yB;y+=mi){const py=Yp(y),maj=Math.abs(y/M-Math.round(y/M))<1e-6;if(py<28)continue;gy+=`<line y1="${py}" x1="${maj?10:20}" y2="${py}" x2="28" stroke="${maj?T.ink:T.mut}" stroke-width="${maj?1:.6}"/>`+(maj?`<text x="11" y="${py-3}" font-size="10.5" font-weight="600" fill="${T.ink}" transform="rotate(-90 11 ${py-3})">${lab(y)}</text>`:'')}
+  rx.innerHTML=gx;ry.innerHTML=gy}
+function plDim(x0,y0,x1,y1,off,k,fs,vert){const Y=y=>-y,L=Math.round(Math.hypot(x1-x0,y1-y0));if(L<1)return '';const c=PL.T?.mut||'#6B6458',sw=k;
   if(!vert){const y=y0+off;return `<g stroke="${c}" stroke-width="${sw}"><line x1="${x0}" y1="${Y(y0)}" x2="${x0}" y2="${Y(y)}"/><line x1="${x1}" y1="${Y(y1)}" x2="${x1}" y2="${Y(y)}"/><line x1="${x0}" y1="${Y(y)}" x2="${x1}" y2="${Y(y)}"/><line x1="${x0-4*k}" y1="${Y(y)+4*k}" x2="${x0+4*k}" y2="${Y(y)-4*k}" stroke-width="${2*k}"/><line x1="${x1-4*k}" y1="${Y(y)+4*k}" x2="${x1+4*k}" y2="${Y(y)-4*k}" stroke-width="${2*k}"/></g><text x="${(x0+x1)/2}" y="${Y(y)-3*k}" font-size="${fs*.9}" text-anchor="middle" fill="${c}">${L}</text>`}
   const x=x0+off;return `<g stroke="${c}" stroke-width="${sw}"><line x1="${x0}" y1="${Y(y0)}" x2="${x}" y2="${Y(y0)}"/><line x1="${x1}" y1="${Y(y1)}" x2="${x}" y2="${Y(y1)}"/><line x1="${x}" y1="${Y(y0)}" x2="${x}" y2="${Y(y1)}"/><line x1="${x-4*k}" y1="${Y(y0)+4*k}" x2="${x+4*k}" y2="${Y(y0)-4*k}" stroke-width="${2*k}"/><line x1="${x-4*k}" y1="${Y(y1)+4*k}" x2="${x+4*k}" y2="${Y(y1)-4*k}" stroke-width="${2*k}"/></g><text x="${x-3*k}" y="${Y((y0+y1)/2)}" font-size="${fs*.9}" text-anchor="middle" fill="${c}" transform="rotate(-90 ${x-3*k} ${Y((y0+y1)/2)})">${L}</text>`}
 /* до соседних параллельных стен в чистоте */

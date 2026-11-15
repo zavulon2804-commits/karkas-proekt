@@ -31,7 +31,7 @@ const FORM=[
     {hint:'Укосины ставятся под 45–60° на сплошных участках стены, в каждой стене — обоих направлений. Если по СНиП им не хватает места (мешают проёмы), стена автоматически получает плитную обшивку. Фронтоны обшиваются всегда.'}]},
   {id:'ops',t:'АР · Окна и двери',custom:'ops'},
   {id:'iw',t:'АР · Перегородки',custom:'iw'},
-  {id:'blocks',t:'АР · Крылья дома (Г-, Т-, П-образный план)',custom:'blocks'},
+  {id:'blocks',t:'АР · Крылья дома',custom:'blocks'},
   {id:'rooms',t:'АР · Помещения',custom:'rooms'},
   {id:'fin',t:'АР · Отделка',f:[{k:'finFacade',l:'Фасад',type:'sel',opts:finOpts('facade'),wide:true},{k:'finWall',l:'Стены помещений (по умолчанию)',type:'sel',opts:finOpts('wall'),wide:true},{k:'finFloor',l:'Пол (по умолчанию)',type:'sel',opts:finOpts('floor'),wide:true},{k:'finCeil',l:'Потолок (по умолчанию)',type:'sel',opts:finOpts('ceil'),wide:true},
     {hint:'Санузлам и ванным плитка назначается сама (по названию помещения); котельной, кухне и прихожей — керамогранит на пол. Отделку отдельной комнаты меняйте на плане: нажмите на помещение.'}]},
@@ -112,10 +112,10 @@ const getK=k=>k.split('.').reduce((o,x)=>o?.[x],P);
 const setK=(k,v)=>{const p=k.split('.');let o=P;for(let i=0;i<p.length-1;i++)o=o[p[i]];o[p.at(-1)]=v};
 
 function renderSide(){
-  const el=$('#side'); let h=`<div class="start"><label for="tplSel">Начать с шаблона</label><div class="btns"><select id="tplSel">${Object.entries(TEMPLATES).map(([k,t])=>`<option value="${k}">${esc(t.n)}</option>`).join('')}</select><button class="btn sm" id="tplGo">Загрузить</button></div><div class="note" id="tplMsg">Шаблон заменит текущий проект. Отменить — кнопкой ↶ вверху.</div></div>`;
+  const el=$('#side'); let h=`<h2 class="side-h"></h2><div class="start"><label for="tplSel">Начать с шаблона</label><div class="btns"><select id="tplSel">${Object.entries(TEMPLATES).map(([k,t])=>`<option value="${k}">${esc(t.n)}</option>`).join('')}</select><button class="btn sm" id="tplGo">Загрузить</button></div><div class="note" id="tplMsg">Шаблон заменит текущий проект. Отменить — кнопкой ↶ вверху.</div></div>`;
   const openState=(()=>{try{return JSON.parse(localStorage.getItem(LS_KEY+'-open')||'null')}catch(e){return null}})()||{site:true,house:true};
   FORM.forEach(g=>{
-    h+=`<details class="grp" data-g="${g.id}" ${openState[g.id]?'open':''}><summary>${esc(g.t)}<small id="sum-${g.id}"></small></summary>`;
+    h+=`<details class="grp" data-g="${g.id}" ${openState[g.id]?'open':''}><summary>${esc(g.t.replace(/^(\d+ · Исходные данные: |АР · |КР · )/,'').replace(/^./,c=>c.toUpperCase()))}<small id="sum-${g.id}"></small></summary>`;
     if(g.custom) h+=`<div id="custom-${g.custom}"></div>`;
     else{h+='<div class="fields">';g.f.forEach(f=>{
       if(f.hint){h+=`<div class="hint">${esc(f.hint)}</div>`;return}
@@ -157,6 +157,7 @@ function renderSide(){
   renderOps(); renderIW(); renderBlocks(); renderRooms(); renderFile(); renderSite();
   $('#tplGo').onclick=()=>{const t=TEMPLATES[$('#tplSel').value],keep={tech:P.tech,lumber:P.lumber,site:P.site,snow:P.snow,wind:P.wind,climMode:P.climMode,freeze:P.freeze,freezeAuto:P.freezeAuto,db:P.db};P=normalize(t.f());Object.assign(P,keep);{const T=TECH[P.tech];if(T&&T.def)Object.assign(P,T.def)}mapToDb();const fx=autoFix();renderSide();rebuild();$('#tplMsg').textContent='Загружен шаблон «'+t.n+'»'+(fx.length?'. Сечения подобраны по расчёту: '+fx.join('; '):'')+'. Отменить — кнопкой ↶.'};
   renderSums();
+  applyStep();
 }
 function tpl(name,A,B,H,walls,ops){const o=clone(DEF);return Object.assign(o,{name,A,B,H,walls,openings:ops})}
 const W=(wall,type,x,w,h=type==='door'?2100:1400,sill=type==='door'?0:900)=>({wall,type,x,w,h,sill});
@@ -303,26 +304,35 @@ function renderTop(){
   $('#pname').textContent=P.name||'';
   const nb=C.checks.filter(c=>!c.ok).length, nw=ADV.filter(a=>a.lvl==='warn').length;
   $('#kpis').innerHTML=[
-    ['Технология',(TECH[P.tech]||TECH.free).short],
-    ['Площадь застройки',fmt(tep(M).build,1)+' м²'],
-    ['Пиломатериал',fmt(S.woodVol,2)+' м³'],
+    ['Площадь',fmt(tep(M).build,1)+' м²'],
     ...(M.mans&&M.mansOk?[['Мансарда, h≥1,5 м',fmt(M.mansArea,1)+' м²']]:[]),
-    ['Свай',M.piles.length+' шт'],
-    ['Материалы ≈',rub(S.total)],
-    ['Отделка ≈',rub(S.fin.total)],
+    ['Материалы',rub(S.total)],
+    ['Отделка',rub(S.fin.total)],
     ['Расчёт',nb?`${nb} не проходит`:`${C.checks.length} из ${C.checks.length} ✓`,nb?'bad':'ok']
   ].map(([a,b,c])=>`<div class="kpi ${c||''}"><small>${a}</small><b>${b}</b></div>`).join('');
+  {const d=$('#dot-kr');if(d){d.className='dot'+(nb?' bad':'');d.title=nb?nb+' проверок не проходит':''}}
   const t=$('#tabs').querySelector('[data-t="adv"] .cnt'); if(t){const nbad=ADV.filter(a=>a.lvl==='bad').length;t.textContent=nbad||nw||'✓';t.className='cnt'+(nbad?' bad':nw?' warn':'')}
   const tc=$('#tabs').querySelector('[data-t="calc"] .cnt'); if(tc){tc.textContent=nb?nb:'✓';tc.className='cnt'+(nb?' bad':'')}
 }
 
 /* ---------- вкладки ---------- */
-/* порядок работы: исходные данные (форма слева) → АР (план) → КР (3D, расчёт, чертежи, спецификация) */
-const TABS=[['plan','1 · План (АР)'],['3d','2 · 3D-модель'],['calc','3 · Расчёт (КР)',true],['draw','4 · Чертежи'],['spec','Спецификация и смета'],['cut','Раскрой'],['adv','Советы',true],['db','База материалов'],['kb','База знаний']];
+/* шаги работы: данные → план (АР) → конструкции (КР) → чертежи и смета; у шага — свои разделы слева и свои вкладки */
+const TABS=[['plan','План'],['3d','3D-модель'],['calc','Расчёт',true],['adv','Советы',true],['draw','Чертежи'],['spec','Спецификация и смета'],['cut','Раскрой'],['db','База материалов'],['kb','Справка']];
+const STEPS=[{k:'data',n:'Данные',secs:['site','loads','house'],tabs:['plan']},{k:'ar',n:'План',secs:['blocks','iw','ops','rooms','fin','roof'],tabs:['plan','3d']},
+  {k:'kr',n:'Конструкции',secs:['found','walls','roof'],tabs:['3d','calc','adv']},{k:'docs',n:'Чертежи и смета',secs:['cutp','prices','file'],tabs:['draw','spec','cut','db']}];
+let curStep='ar';try{curStep=localStorage.getItem(LS_KEY+'-step')||'ar'}catch(e){}if(!STEPS.some(s=>s.k===curStep))curStep='ar';
+const stepOf=k=>STEPS.find(s=>s.k===k)||STEPS[1];
+function renderSteps(){const el=$('#steps');if(!el)return;el.innerHTML=STEPS.map((s,i)=>`<button data-step="${s.k}" aria-current="${s.k===curStep?'step':'false'}"><b>${i+1}</b>${s.n}<span class="dot" id="dot-${s.k}"></span></button>`).join('');
+  el.querySelectorAll('[data-step]').forEach(b=>b.onclick=()=>setStep(b.dataset.step))}
+function setStep(k,tab){curStep=k;try{localStorage.setItem(LS_KEY+'-step',k)}catch(e){}const st=stepOf(k);if(tab)curTab=tab;else if(!st.tabs.includes(curTab))curTab=st.tabs[0];
+  renderSteps();applyStep();renderTabs();renderActive();if(typeof renderTop==='function'&&M)renderTop()}
+function applyStep(){const st=stepOf(curStep);document.querySelectorAll('#side details.grp').forEach(d=>{const on=st.secs.includes(/** @type {HTMLElement} */(d).dataset.g);/** @type {HTMLElement} */(d).hidden=!on});
+  const sb=$('#side .start');if(sb)sb.hidden=curStep!=='data';const hd=$('#side .side-h');if(hd)hd.textContent=st.n}
 let curTab='plan'; try{curTab=localStorage.getItem(LS_KEY+'-tab2')||'plan'}catch(e){}
-if(!TABS.some(t=>t[0]===curTab)) curTab='plan';
+if(!TABS.some(t=>t[0]===curTab)||!stepOf(curStep).tabs.includes(curTab)) curTab=stepOf(curStep).tabs[0];
 function renderTabs(){
-  $('#tabs').innerHTML=TABS.map(([k,l,c])=>`<button role="tab" data-t="${k}" aria-selected="${k===curTab}">${l}${c?'<span class="cnt"></span>':''}</button>`).join('');
+  const st=stepOf(curStep),vis=curTab==='kb'?['kb']:st.tabs;$('#tabs').hidden=vis.length<2;
+  $('#tabs').innerHTML=TABS.filter(t=>vis.includes(String(t[0]))).map(([k,l,c])=>`<button role="tab" data-t="${k}" aria-selected="${k===curTab}">${l}${c?'<span class="cnt"></span>':''}</button>`).join('');
   $('#tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{curTab=b.dataset.t;try{localStorage.setItem(LS_KEY+'-tab2',curTab)}catch(e){}
     $('#tabs').querySelectorAll('button').forEach(x=>x.setAttribute('aria-selected',x===b));renderActive()});
 }

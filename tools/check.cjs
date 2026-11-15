@@ -13,12 +13,12 @@ function three(){const c=[path.join(ROOT,'node_modules/three/build/three.module.
   const errs=[];p.on('pageerror',e=>errs.push('JS: '+e.message));p.on('console',m=>{if(m.type()==='error'&&!/ERR_TUNNEL|Failed to load|net::/.test(m.text()))errs.push('console: '+m.text())});
   await p.goto('file://'+path.join(ROOT,'index.html'));await p.waitForTimeout(1200);
   const keys=await p.evaluate(()=>Object.keys(TEMPLATES)),dxf=!!arg('--dxf'),res={};
-  for(const k of keys){await p.selectOption('#tplSel',k);await p.click('#tplGo');await p.waitForTimeout(400);
+  for(const k of keys){await p.evaluate(k=>{$('#tplSel').value=k;$('#tplGo').click()},k);await p.waitForTimeout(400);
     res[k]=await p.evaluate(dx=>{SHEETS=makeSheets();const o={cost:Math.round(S.total),piles:M.piles.length,rooms:(M.rooms||[]).map(r=>+r.area.toFixed(1)).join(' '),roof:+(M.roofArea||0).toFixed(1),
       fail:C.checks.filter(c=>!c.ok).map(c=>c.id).join(' '),errs:M.errs.length+M.ops.filter(o=>!o.ok).length,sheets:SHEETS.map(s=>s.code).join(' '),svg:SHEETS.reduce((a,s)=>a+s.svg.length,0)};
       if(dx)SHEETS.forEach(s=>{try{sheetDxf(s)}catch(e){o.dxfErr=(o.dxfErr||'')+s.code+': '+e.message+'; '}});return o},dxf)}
   const sh=arg('--shots');if(sh){const [k,codes]=String(sh).split(':'),out=path.resolve(arg('--out')||path.join(ROOT,'dist/shots'));fs.mkdirSync(out,{recursive:true});
-    await p.selectOption('#tplSel',k);await p.click('#tplGo');await p.waitForTimeout(400);const pg=await b.newPage({viewport:{width:1680,height:1188}});
+    await p.evaluate(k=>{$('#tplSel').value=k;$('#tplGo').click()},k);await p.waitForTimeout(400);const pg=await b.newPage({viewport:{width:1680,height:1188}});
     const list=await p.evaluate(c=>{SHEETS=makeSheets();return SHEETS.filter(s=>!c||c.split(',').includes(s.code)).map(s=>({code:s.code,svg:s.svg}))},codes||'');
     for(const s of list){await pg.setContent(`<body style="margin:0">${s.svg.replace('width="420mm" height="297mm"','width="1680" height="1188"')}</body>`);const f=path.join(out,`${k}_${s.code}.png`);await pg.screenshot({path:f});console.log('снимок',f)}}
   const bf=path.join(ROOT,'tests/baseline.json');let diff=0;
