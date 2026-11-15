@@ -1,0 +1,26 @@
+
+<header class="top">
+  <div class="brand">
+    <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><rect x="1" y="1" width="32" height="32" rx="7" fill="var(--accent)"/><path d="M7 17 17 9l10 8M10 15v10h14V15M14 25v-6h6v6" fill="none" stroke="var(--accent-ink)" stroke-width="2" stroke-linejoin="round"/><path d="M9 28h16" stroke="var(--accent-ink)" stroke-width="1.6" stroke-dasharray="2 2"/></svg>
+    <div><b>Каркас-Проект</b><span id="pname"></span></div>
+  </div>
+  <div class="hbtns"><button class="btn sm" id="undo" title="Отменить (Ctrl+Z)" aria-label="Отменить">↶ Отменить</button><button class="btn sm" id="redo" title="Повторить (Ctrl+Y)" aria-label="Повторить">↷</button></div>
+  <div class="kpis" id="kpis"></div>
+</header>
+
+<div class="shell">
+  <aside id="side" aria-label="Параметры проекта"></aside>
+  <main>
+    <nav class="tabs" role="tablist" id="tabs"></nav>
+    <section class="tab" id="tab-3d"></section>
+    <section class="tab" id="tab-draw" hidden></section>
+    <section class="tab" id="tab-spec" hidden></section>
+    <section class="tab" id="tab-cut" hidden></section>
+    <section class="tab" id="tab-calc" hidden></section>
+    <section class="tab" id="tab-adv" hidden></section>
+    <section class="tab" id="tab-db" hidden></section>
+    <section class="tab" id="tab-kb" hidden></section>
+  </main>
+</div>
+<div id="print-area"></div>
+

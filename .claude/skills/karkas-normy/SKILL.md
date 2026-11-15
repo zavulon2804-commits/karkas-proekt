@@ -9,7 +9,13 @@ description: Нормы, правила оформления и устройст
 
 ## 1. Устройство кода
 
-- Всё приложение — один файл `index.html` (HTML + CSS + JS, без сборки). Библиотеки с cdnjs: three.js r128 (3D), JSZip 3.10.1 и SheetJS 0.18.5 (подгружаются при экспорте).
+- **Исходники — в `src/`, `index.html` собирается командой `node build.mjs` и вручную не правится.** Сборщик склеивает модули в один файл (GitHub Pages) и копию для claude.ai `dist/artifact.html`. Модули — обычные скрипты с общей областью видимости, порядок — по номеру в имени. Открывать только нужный модуль:
+  - `01-util` общие функции · `02-spravochniki` справочники, роли деталей, `DEF`, localStorage · `03-geom-klimat-nagruzki` сетки, климат, нагрузки, балки
+  - `04-build-model` `build(P)`: ростверк, пол, стены, крылья, проёмы, перекрытие, стропила, прогон · `05-pomeshcheniya-karkas-sten` помещения, ТЭП, укосины, каркас стены
+  - `06-raschet` `calc`, ветер, подбор сечений · `07-specifikaciya-raskroy` спецификация, раскрой, смета · `08-sovety` советы
+  - `09-ui-forma-shablony` форма ввода, шаблоны `TEMPLATES`, история, вкладки · `10-3d` three.js
+  - `11-svg-osnova` примитивы SVG, размеры, рамка, штамп · `12-listy-plan-fundament-steny` Ф-1, Ф-2, АР-1, КД, мансарда · `13-list-fasady` фасады · `14-listy-krovlya-od` план кровли, КР-1, ОД · `15-listy-eksport-dxf` `makeSheets`, DXF, ZIP · `16-ui-tablicy-raschet` вкладки спецификации, расчёта, базы · `17-baza-znaniy` база знаний · `18-start` запуск
+- Библиотеки с cdnjs: three.js r128 (3D), JSZip 3.10.1 и SheetJS 0.18.5 (подгружаются при экспорте).
 - Единицы: геометрия — **мм**, нагрузки — **кПа (кН/м²)**, погонные — кН/м (= Н/мм), силы — кН.
 - Поток данных: `P` (исходные данные, localStorage `karkas-proekt-v1`) → `build(P)` → модель `M` (стены, проёмы, детали `M.mem`, сваи, помещения `M.rooms`) → `calc(M)` (проверки `C.checks`, ветер `C.H`) → `spec(M,C)` (марки, раскрой, смета) → `advice()` → `makeSheets()` (SVG A3 → DXF).
 - План прямоугольный A×B. Наружные стены: W1 (y=0, фасад), W2 (x=A), W3 (y=B), W4 (x=0). Перегородки `P.walls` (`axis` x|y, `c`, `from`, `to`, `bearing`) получают id I1, I2… Фронтоны G2/G4, стенки мансарды K1/K3.
@@ -61,6 +67,8 @@ description: Нормы, правила оформления и устройст
 
 ## 6. Проверка после каждой правки
 
+Основной способ — скилл **karkas-check** (`node build.mjs && node tools/check.cjs`). Пункты ниже — что смотреть глазами.
+
 Python-Playwright в облачной среде не установлен — использовать Node: `require('playwright')`, `chromium.launch()` без параметров (см. также скилл webapp-testing).
 
 1. Открыть `file:///…/index.html`, собрать ошибки `pageerror` и `console.error` (ошибка загрузки шрифтов/CDN без интернета допустима, ошибки JS — нет).
@@ -70,6 +78,8 @@ Python-Playwright в облачной среде не установлен — �
 5. Коммит в `main` с понятным описанием на русском; README/CLAUDE.md — если поменялись правила.
 
 ## 7. Публикация
+
+Скилл **karkas-publish**: `bash tools/publish.sh "описание"`, затем Artifact из `dist/artifact.html`.
 
 - Репозиторий: github.com/zavulon2804-commits/karkas-proekt (ветка `main`).
 - Копия на claude.ai: https://claude.ai/artifact/KxJ1LC4oycDUgcE3T1H6Ek. Перед публикацией прочитать весь файл; публиковать без первой строки-обёртки (`<!doctype…<body>`) и без завершающего `</body></html>` — их добавляет платформа. Возможность `downloads` сохраняется сама.
