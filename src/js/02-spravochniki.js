@@ -136,7 +136,7 @@ const GRP_ORDER=Object.keys(GRP);
 /* ---------- пример проекта ---------- */
 const DEF={
   name:'Дом 9×7, двускатная крыша',
-  A:9000,B:7000,H:2800,
+  A:9000,B:7000,H:2800,furn:[],
   tech:'free',corner:'warm',topPlates:2,instLayer:false,windBoard:false,
   lumber:'planed',studB:45,studH:145,studS:625,partH:95,partS:600,lintelH:195,lintelPly:2,wallOsb:9,
   bracing:'sheathing',sheathMat:'osb9',nailStep:150,braceB:25,braceH:100,

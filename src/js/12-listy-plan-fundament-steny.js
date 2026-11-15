@@ -49,6 +49,8 @@ function sheetPlan(){
   ay.forEach((y,i)=>{g+=Ln(X(AX)+5,Y(y),X(0)-35,Y(y),'ax')+bubble(X(0)-38.6,Y(y),AX_LET[i]||'?')});
   /* помещения: лёгкая заливка */
   (M.rooms||[]).forEach(r=>r.cells.forEach(c=>g+=`<rect x="${f2(X(c[0]))}" y="${f2(Y(c[3]))}" width="${f2((c[2]-c[0])/s)}" height="${f2((c[3]-c[1])/s)}" fill="${r.kind==='living'?'#F3F7F1':r.kind==='tech'?'#F6F1EA':'#F7F7F7'}" stroke="none"/>`));
+  /* мебель и оборудование — тонкими линиями */
+  (P.furn||[]).forEach(f=>furnPrims(f).forEach(q=>{g+=q[0]==='r'?Rc(X(q[1]),Y(q[4]),(q[3]-q[1])/s,(q[4]-q[2])/s,'t'):q[0]==='c'?Ci(X(q[1]),Y(q[2]),q[3]/s,'t'):Ln(X(q[1]),Y(q[2]),X(q[3]),Y(q[4]),'t')}));
   const WL=M.walls.filter(w=>w.zb==null);
   const wr=w0=>{const x0=w0.x0-(w0.uy?w0.d/2:0),y0=w0.y0-(w0.ux?w0.d/2:0),x1=w0.ux?w0.x0+w0.L:w0.x0+w0.d/2,y1=w0.uy?w0.y0+w0.L:w0.y0+w0.d/2;return [x0,y0,x1,y1]};
   WL.forEach(wl=>{const [x0,y0,x1,y1]=wr(wl);g+=Rc(X(x0),Y(y1),(x1-x0)/s,(y1-y0)/s,wl.ext?'wl':'wlp')});

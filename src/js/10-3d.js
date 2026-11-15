@@ -4,13 +4,17 @@ let R3=null;
 function render3DTab(){
   const el=$('#tab-3d');
   if(!el.dataset.ready){
-    el.innerHTML=`<div class="layers" id="layers">${GRP_ORDER.map(g=>`<button class="chip" data-l="${g}" aria-pressed="${layers[g]}"><i style="background:${GRP[g].css}"></i>${GRP[g].n}</button>`).join('')}</div>
+    el.innerHTML=`<div class="v3mode" role="group" aria-label="Что показать"><button class="btn sm" data-v3="house" aria-pressed="${V3==='house'}">Дом (АР)</button><button class="btn sm" data-v3="frame" aria-pressed="${V3==='frame'}">Каркас (КР)</button></div>
+      <div class="layers" id="layersAr"${V3==='house'?'':' hidden'}>${AR_GRP.map(([g,n])=>`<button class="chip" data-a="${g}" aria-pressed="${arLayers[g]}">${n}</button>`).join('')}</div>
+      <div class="layers" id="layers"${V3==='frame'?'':' hidden'}>${GRP_ORDER.map(g=>`<button class="chip" data-l="${g}" aria-pressed="${layers[g]}"><i style="background:${GRP[g].css}"></i>${GRP[g].n}</button>`).join('')}</div>
       <div class="viewer" id="viewer"><canvas id="c3d"></canvas><div class="vhelp">Вращать — тянуть · Сдвиг — правая кнопка или Shift · Масштаб — колесо, щипок</div>
       <div class="vinfo" id="vinfo">Нажмите на элемент, чтобы увидеть его марку и размеры.</div>
       <div class="vbtns"><button class="btn sm" id="vReset">Вид по умолчанию</button></div></div>`;
     el.dataset.ready='1';
     el.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>{const g=b.dataset.l;layers[g]=!layers[g];b.setAttribute('aria-pressed',layers[g]);if(R3)applyLayers()});
     $('#vReset').onclick=()=>{if(R3){fitCam();draw3()}};
+    el.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{const g=b.dataset.a;arLayers[g]=!arLayers[g];b.setAttribute('aria-pressed',arLayers[g]);if(R3)applyLayers()});
+    el.querySelectorAll('[data-v3]').forEach(b=>b.onclick=()=>{V3=b.dataset.v3;el.querySelectorAll('[data-v3]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v3===V3));$('#layers').hidden=V3!=='frame';$('#layersAr').hidden=V3!=='house';if(R3)applyLayers()});
   }
   if(!window.THREE){$('#vinfo').textContent='3D-библиотека загружается… Если модель не появится — нет интернета; остальные вкладки работают.';return}
   if(!R3){init3D();if(/^3D-библиотека/.test($('#vinfo').textContent))$('#vinfo').textContent='Нажмите на элемент, чтобы увидеть его марку и размеры.'}
@@ -76,11 +80,12 @@ function build3D(){
   ground.position.set(AXg/2,BYg/2,0);ground.renderOrder=-1;root.add(ground);
   const gridH=new THREE.GridHelper(Math.max(gw,gh),Math.round(Math.max(gw,gh)/1000),0x5d7350,0x8aa07b);gridH.rotation.x=Math.PI/2;gridH.position.set(AXg/2,BYg/2,1);gridH.material.transparent=true;gridH.material.opacity=.35;root.add(gridH);
   const bg=getComputedStyle(document.documentElement).getPropertyValue('--scene').trim()||'#dce3de';R3.renderer.setClearColor(new THREE.Color(bg));
+  buildHouse3D();
   applyLayers(false);
   if(!R3.fitted){fitCam();R3.fitted=true}
   draw3();
 }
-function applyLayers(redraw=true){Object.entries(R3.groups).forEach(([g,G])=>G.visible=!!layers[g]);if(redraw)draw3()}
+function applyLayers(redraw=true){Object.entries(R3.groups).forEach(([g,G])=>G.visible=V3==='house'?(/^ar/.test(g)&&(arLayers[g]??true))||g==='piles':!/^ar/.test(g)&&!!layers[g]);if(redraw)draw3()}
 function fitCam(){const c=R3.cam,AX=M.AX||M.A,BY=M.BY||M.B;c.target.set(AX/2000,M.zRidge/2000,-BY/2000);c.r=Math.max(AX,BY,M.zRidge)/1000*2.1;c.theta=-2.25;c.phi=1.08}
 function resize3(){if(!R3)return;const cv=R3.renderer.domElement,w=cv.clientWidth,h=cv.clientHeight;if(!w||!h)return;R3.renderer.setSize(w,h,false);R3.camera.aspect=w/h;R3.camera.updateProjectionMatrix();draw3()}
 function draw3(){if(!R3)return;const {cam,camera}=R3,t=cam.target;camera.position.set(t.x+cam.r*Math.sin(cam.phi)*Math.cos(cam.theta),t.y+cam.r*Math.cos(cam.phi),t.z+cam.r*Math.sin(cam.phi)*Math.sin(cam.theta));camera.lookAt(t);R3.renderer.render(R3.scene,camera)}
@@ -91,6 +96,7 @@ function pick3(e){
   const hit=ray.intersectObjects(objs,false)[0];const info=$('#vinfo');
   if(!hit){info.textContent='Нажмите на элемент, чтобы увидеть его марку и размеры.';return}
   const m=hit.object.userData.m;
+  if(m.ar){info.textContent=m.ar;return}
   if(m.pile){info.innerHTML=`<b>Свая №${m.pile.no}</b> · ${esc(M.pileT.name)} · L=${M.pileLen} мм · нагрузка ${fmt(m.pile.N,1)} из ${fmt(C.Fd,1)} кН`;return}
   if(!m.role){info.textContent=GRP[m.grp].n;return}
   info.innerHTML=`<span class="mk">${esc(m.mark||m.role)}</span> · ${esc(ROLE[m.role])} · ${m.sec.join('×')} мм · L=${fmt(r10(m.L))} мм${m.n>1?` · ${m.n} доски`:''}${m.wall?` · ${esc(M.walls.find(w=>w.id===m.wall)?.name||'')}`:''}`;
