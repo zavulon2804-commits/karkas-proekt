@@ -381,7 +381,7 @@ const frameRows=f=>dbRows(P.lumber,f);
 function findRow(b,h){return (P.db||[]).find(r=>r.use&&+r.b===+b&&+r.h===+h)}
 function nearestRow(rows,b,h){let best=null,bs=Infinity;rows.forEach(r=>{const sc=Math.abs(r.h-h)+2*Math.abs(r.b-b)+(r.h<h-10?1000:0)+(r.b<b?1:0);if(sc<bs){bs=sc;best=r}});return best}
 const SEC_PAIRS=[['studB','studH',()=>frameRows(r=>r.b>=40&&r.h>=95),'стойка'],['joistB','joistH',()=>frameRows(r=>r.b>=40&&r.h>=120),'лага'],['rafterB','rafterH',()=>frameRows(r=>r.b>=40&&r.h>=120),'стропило'],
-  ['attB','attH',()=>frameRows(r=>r.b>=40&&r.h>=120),'балка перекрытия'],['packB','packH',()=>frameRows(r=>r.b>=40&&r.h>=145),'доска ростверка'],['beamB','beamH',()=>dbRows('beam'),'брус ростверка'],['braceB','braceH',()=>dbRows('edged',r=>r.b<=32),'укосина']];
+  ['attB','attH',()=>frameRows(r=>r.b>=40&&r.h>=120),'балка перекрытия'],['packB','packH',()=>frameRows(r=>r.b>=40&&r.h>=145),'доска ростверка'],['beamB','beamH',()=>dbRows('beam'),'брус ростверка'],['braceB','braceH',()=>dbRows('edged',r=>r.b<=32),'укосина'],['purB','purH',()=>dbRows('beam'),'коньковый прогон'],['postB','postH',()=>dbRows('beam'),'стойка под прогон']];
 const SEC_H=[['partH',()=>frameRows(r=>r.b===+P.studB&&r.h>=70),'стойка перегородки'],['lintelH',()=>frameRows(r=>r.b===+P.studB&&r.h>=120),'перемычка'],['kneeD',()=>frameRows(r=>r.b===+P.studB&&r.h>=70),'стойка стенки мансарды']];
 /* подогнать все сечения проекта под базу и выбранный тип доски */
 function mapToDb(){
@@ -392,7 +392,7 @@ function mapToDb(){
   SEC_H.forEach(([k,rows,nm])=>{const rs=rows();if(!rs.length)return;if(rs.some(r=>r.h===+P[k]))return;const r=nearestRow(rs,+P.studB,+P[k]);if(r){ch.push(`${nm} → ${r.b}×${r.h}`);P[k]=r.h}});
   return ch;
 }
-function usedNotInDb(){const out=[];SEC_PAIRS.forEach(([kb,kh,rows,nm])=>{if(kb==='packB'&&P.beamType!=='pack')return;if(kb==='beamB'&&P.beamType==='pack')return;if(kb==='braceB'&&P.bracing!=='braces')return;if(!rows().some(r=>r.b===+P[kb]&&r.h===+P[kh]))out.push(`${nm} ${P[kb]}×${P[kh]}`)});return out}
+function usedNotInDb(){const out=[];SEC_PAIRS.forEach(([kb,kh,rows,nm])=>{if(kb==='packB'&&P.beamType!=='pack')return;if(kb==='beamB'&&P.beamType==='pack')return;if(kb==='braceB'&&P.bracing!=='braces')return;if((kb==='purB'||kb==='postB')&&P.rafterSys!=='purlin')return;if(!rows().some(r=>r.b===+P[kb]&&r.h===+P[kh]))out.push(`${nm} ${P[kb]}×${P[kh]}`)});return out}
 const PILE_LENS={screw:[2000,2500,3000,3500,4000,4500,5000,6000],driven:[3000,4000,5000,6000,7000,8000],bored:[1500,2000,2500,3000,3500,4000,4500,5000],manual:[1500,2000,2500,3000,3500,4000,5000,6000]};
 const ALL_LENS=[...new Set(Object.values(PILE_LENS).flat())].sort((a,c)=>a-c);
 const ROLE={
@@ -400,7 +400,7 @@ const ROLE={
   'НО':'Нижняя обвязка','ВО':'Верхняя обвязка','С':'Стойка','СП':'Стойка проёма опорная','СК':'Стойка укороченная',
   'ПР':'Перемычка (доска на ребро)','Р':'Ригель подоконный','УК':'Укосина (раскос) врезная','ИО':'Обрешётка инсталляционного слоя','УТ':'Доска тёплого угла / примыкания (плашмя)','СФ':'Стойка фронтона / надстройки','ОФ':'Обвязка надстройки',
   'БП':'Балка перекрытия (чердак / мансарда)','СН':'Стропильная нога','СНФ':'Стропило фронтонного свеса','КБ':'Коньковая доска','ПК':'Стойка под стропило',
-  'НР':'Нарожник (укороченное стропило у ендовы)','ЕН':'Ендовная балка (сдвоенная)','КР':'Контробрешётка','ОР':'Обрешётка','ВД':'Ветровая доска','ЛД':'Лобовая доска','РГ':'Ригель (затяжка) мансарды'
+  'КП':'Коньковый прогон','СТК':'Стойка под коньковый прогон','ЛЖ':'Лежень под стойки','НР':'Нарожник (укороченное стропило у ендовы)','ЕН':'Ендовная балка (сдвоенная)','КР':'Контробрешётка','ОР':'Обрешётка','ВД':'Ветровая доска','ЛД':'Лобовая доска','РГ':'Ригель (затяжка) мансарды'
 };
 const ROLE_ORDER=Object.keys(ROLE);
 const GRP={
@@ -427,7 +427,7 @@ const DEF={
   bracing:'sheathing',sheathMat:'osb9',nailStep:150,braceB:25,braceH:100,
   pile:'p108',pileFd:50,soil:'loam',freeze:1400,pileMaxS:2500,pileLen:'auto',plinth:500,
   beamType:'brus',beamB:150,beamH:200,packB:45,packH:195,beamPly:3,beamsMid:'auto',joistB:45,joistH:195,joistS:600,floorOsb:22,
-  roof:'gable',slope:30,roofMat:'metal',overhang:500,gableOver:400,rafterB:45,rafterH:195,rafterS:600,attB:45,attH:195,strut:false,mansard:false,kneeH:1200,mansH:2400,kneeD:95,gMans:.6,pMans:1.5,
+  roof:'gable',slope:30,roofMat:'metal',overhang:500,gableOver:400,rafterB:45,rafterH:195,rafterS:600,attB:45,attH:195,strut:false,rafterSys:'hang',purB:150,purH:200,postB:100,postH:100,postS:3000,mansard:false,kneeH:1200,mansH:2400,kneeD:95,gMans:.6,pMans:1.5,
   snow:'III',wind:'I',terrain:'B',gFloor:.5,pFloor:1.5,gAttic:.35,pAttic:.7,gWall:.5,
   stocks:'6000, 4500, 3000',kerf:4,
   prices:{wood:28000,osb9:780,osb12:980,osb22:1950,insul:4300,wind:2600,vapor:1700,roofMetal:650,roofProf:520,roofSoft:820,roofOndulin:430,pile:2900,pileWork:1300,rc20:1500,rc30:2400,rcDrive:3500,plate:450,concrete:6800,rebar:80,sleeve:120,boredWork:1800,nails:260,screws:950,bracket:65,antiseptic:160,anchor:190,ply9:1350,csp12:1150,windBoard:750},
@@ -764,10 +764,17 @@ function build(P,OPT={}){
   slopes.forEach(sl=>{[...xsR.map(x=>[x,'СН']),...barge.map(x=>[x,'СНФ'])].forEach(([x,role])=>{const sv=cutS(sl,x);if(sv>=sl.len-80)return;
     bar('roof',sv>0?'НР':role,[br,hr],1,at(sl,x,sv,hr/2),at(sl,x,sl.len,hr/2),sl.n,hr,br,{L:sv>0?r10(sl.len-sv+hr*tn):Lraf})})});
   M.zRidge=gable?zr0+B/2*tn+hr/cs:zr0+(B+ov)*tn+hr/cs;
-  if(gable){const zTop=zr0+B/2*tn+hr/cs;bar('roof','КБ',[br,hr],1,[-og,B/2,zTop-hr/2],[A+og,B/2,zTop-hr/2],[0,0,1],hr,br,{splitAt:rel(xsR,-og)})}
+  M.purlin=gable&&!M.mans&&P.rafterSys==='purlin';
+  if(M.purlin){const pb=n(P.purB),ph=n(P.purH),qb=n(P.postB),qh=n(P.postH),ps=Math.max(1000,n(P.postS)),zPt=zr0+(B/2-pb/2)*tn,zL1=zt+ha+qb;
+    const nn=Math.max(1,Math.ceil((A-2*d)/ps)),xsP=[d/2,...[...Array(nn-1)].map((_,i)=>d+(A-2*d)*(i+1)/nn),A-d/2];
+    bar('roof','КП',[pb,ph],1,[-og,B/2,zPt-ph/2],[A+og,B/2,zPt-ph/2],[0,0,1],ph,pb,{splitAt:rel(xsP,-og)});
+    xsP.forEach(x=>bar('roof','СТК',[qb,qh],1,[x,B/2,zL1],[x,B/2,zPt-ph],[0,1,0],qh,qb,{}));
+    bar('roof','ЛЖ',[qb,qh],1,[0,B/2,zt+ha+qb/2],[A,B/2,zt+ha+qb/2],[0,0,1],qb,qh,{splitAt:rel(M.xsA,0)});
+    M.pur={pb,ph,qb,qh,xs:xsP,zPt,Lpost:zPt-ph-zL1,notch:pb/2*tn,span:Math.max(...xsP.slice(1).map((x,i)=>x-xsP[i])),onWall:M.attSup!=null&&Math.abs(M.attSup-B/2)<=300}}
+  if(gable&&!M.purlin){const zTop=zr0+B/2*tn+hr/cs;bar('roof','КБ',[br,hr],1,[-og,B/2,zTop-hr/2],[A+og,B/2,zTop-hr/2],[0,0,1],hr,br,{splitAt:rel(xsR,-og)})}
   if(M.mans&&M.mansOk){const hc=150,yT=(M.zc+hc/2-zr0-hr/cs)/tn;M.yT=yT;xsR.forEach(x=>bar('mans','РГ',[50,hc],1,[x+br,yT,M.zc+hc/2],[x+br,B-yT,M.zc+hc/2],[0,0,1],hc,50,{}))}
-  if(P.strut&&!M.mans){(gable?[B/4,3*B/4]:[B/2]).forEach(y=>xsR.forEach(x=>{const hh=zU(y)-zr0;bar('roof','ПК',[br,150],1,[x+br,y,zr0],[x+br,y,zr0+hh],[0,1,0],150,br,{})}))}
-  M.strutY=P.strut&&!M.mans?(gable?[B/4,3*B/4]:[B/2]):[];
+  if(P.strut&&!M.mans&&!M.purlin){(gable?[B/4,3*B/4]:[B/2]).forEach(y=>xsR.forEach(x=>{const hh=zU(y)-zr0;bar('roof','ПК',[br,150],1,[x+br,y,zr0],[x+br,y,zr0+hh],[0,1,0],150,br,{})}))}
+  M.strutY=P.strut&&!M.mans&&!M.purlin?(gable?[B/4,3*B/4]:[B/2]):[];
   const cb=mat.counter, lt=mat.lath;
   slopes.forEach(sl=>{
     if(cb)[...xsR,...barge].forEach(x=>bar('lath','КР',[cb[0],cb[1]],1,at(sl,x,0,hr+cb[0]/2),at(sl,x,sl.len,hr+cb[0]/2),sl.n,cb[0],cb[1]));
@@ -958,7 +965,7 @@ function calc(M){
    const qv=(l.gR/cs*1.1+l.S*1.4*psi)*s+self*1.1/cs, qw=l.wR*1.4*psi*s;
    const Mm=qv*Lh*Lh/8+qw*Ls*Ls/8, W=b*h*h/6, I=b*h**3/12, sig=Mm/W;
    const qp=(l.gR/cs+l.S)*cs*cs*s+l.wR*s+self*cs, f=5*qp*Ls**4/(384*E_MOD*I), flim=Ls/200;
-   push('rafter','Стропильная нога',`${b}×${h}`,`шаг ${M.sr} мм · пролёт ${fmt(Lh/1000,2)} м по горизонтали${M.mans&&M.mansOk?' (опора на стенку мансарды)':P.strut?' (со стойкой)':''}`,Math.max(sig/R_I,f/flim),[
+   push('rafter','Стропильная нога',`${b}×${h}`,`шаг ${M.sr} мм · пролёт ${fmt(Lh/1000,2)} м по горизонтали${M.mans&&M.mansOk?' (опора на стенку мансарды)':M.purlin?' (опора на коньковый прогон)':P.strut?' (со стойкой)':''}`,Math.max(sig/R_I,f/flim),[
      ['Снег на кровлю S, кПа',fmt(l.S,2)+(l.mu<1?` (μ=${fmt(l.mu,2)})`:'')],['Ветер на скат, кПа',fmt(l.wR,3)],
      ['Нагрузка расч., кН/м',fmt(qv,2)],['Момент M, кН·м',fmt(Mm/1e6,2)],['σ / R, МПа',fmt(sig,1)+' / '+R_I],['Прогиб f / fпред, мм',fmt(f,1)+' / '+fmt(flim,1)]])}
   // балки чердака
@@ -967,7 +974,37 @@ function calc(M){
    const rows=[['Нагрузка расч., кН/м',fmt(qd,2)]];
    if(Pk>0){const a=Math.min(M.yk-M.d/2,L-1),bb=Math.min(a,L-a);c.M+=Pk*a*(L-a)/L;c.sig=c.M/c.W;c.f+=Pkn*bb*Math.pow(L*L-bb*bb,1.5)/(9*Math.sqrt(3)*L*E_MOD*c.I);c.uS=c.sig/R_I;c.uF=c.f/c.fl;c.u=Math.max(c.uS,c.uF);rows.push(['Сосредоточенная от стенки мансарды, кН',fmt(Pk/1000,2)])}
    rows.push(['Момент M, кН·м',fmt(c.M/1e6,2)],['σ / R, МПа',fmt(c.sig,1)+' / '+R_I],['Прогиб f / fпред, мм',fmt(c.f,1)+' / '+fmt(c.fl,1)]);
+   if(M.purlin&&!M.pur.onWall){const Lh=M.Lh,qP=(l.gR/cs*1.1+l.S*1.4)*Lh/1000+SELF*M.pur.pb*M.pur.ph*1.1,qPn=(l.gR/cs+l.S)*Lh/1000+SELF*M.pur.pb*M.pur.ph,Pp=qP*M.sr,Ppn=qPn*M.sr,a=Math.min(M.B/2-M.d/2,L-1),bb=Math.min(a,L-a);
+     c.M+=Pp*a*(L-a)/L;c.sig=c.M/c.W;c.f+=Ppn*bb*Math.pow(L*L-bb*bb,1.5)/(9*Math.sqrt(3)*L*E_MOD*c.I);c.uS=c.sig/R_I;c.uF=c.f/c.fl;c.u=Math.max(c.uS,c.uF);rows.push(['Сосредоточенная от стоек прогона (через лежень), кН',fmt(Pp/1000,2)]);rows.forEach(r=>{if(r[0].startsWith('Момент'))r[1]=fmt(c.M/1e6,2);if(r[0].startsWith('σ'))r[1]=fmt(c.sig,1)+' / '+R_I;if(r[0].startsWith('Прогиб'))r[1]=fmt(c.f,1)+' / '+fmt(c.fl,1)})}
    push('attic',M.mans?'Балка перекрытия под мансардой':'Балка перекрытия чердака',`${b}×${h}`,`шаг ${M.sr} мм · пролёт ${fmt(L/1000,2)} м${M.attSup!=null?' (опора на перегородку)':''}`,c.u,rows)}
+  /* опора кровли: коньковый прогон, стойки, врубка и смятие (СП 64.13330) */
+  const qRf=(l.gR/cs*1.1+l.S*1.4),qRn=(l.gR/cs+l.S),sR=M.sr/1000,Rcm90=3;
+  if(M.purlin){const pu=M.pur,Lh=M.Lh,qd=qRf*Lh/1000+SELF*pu.pb*pu.ph*1.1,qn=qRn*Lh/1000+SELF*pu.pb*pu.ph,cont=pu.xs.length>3;
+    const c=bend({b:pu.pb,h:pu.ph,L:pu.span,qd,qn,lim:200,cM:cont?1/10:1/8,cF:cont?2.65/384:5/384});
+    push('purlin','Коньковый прогон',`${pu.pb}×${pu.ph}`,`пролёт между стойками ${fmt(pu.span/1000,2)} м · ${cont?'неразрезной':'однопролётный'} · грузовая ширина ${fmt(Lh/1000,2)} м`,c.u,[['Нагрузка расч., кН/м',fmt(qd,2)],['Момент M, кН·м',fmt(c.M/1e6,2)],['σ / R, МПа',fmt(c.sig,1)+' / '+R_I],['Прогиб f / fпред (L/200), мм',fmt(c.f,1)+' / '+fmt(c.fl,1)]]);
+    const N=qd*pu.span*(cont?1.1:1),bm=Math.min(pu.qb,pu.qh),Ar=pu.qb*pu.qh,lam=pu.Lpost/(.289*bm),phi=lam<=70?1-.8*(lam/100)**2:3000/lam**2;
+    push('post','Стойка под коньковый прогон',`${pu.qb}×${pu.qh}`,`высота ${R(pu.Lpost)} мм · шаг до ${fmt(pu.span/1000,2)} м · ${pu.onWall?'на лежне по несущей перегородке':'на лежне по балкам перекрытия'}`,N/(phi*Ar*R_C),[['Сжатие N, кН',fmt(N/1000,2)],['Гибкость λ (пред. 120)',fmt(lam,0)],['Коэфф. продольного изгиба φ',fmt(phi,2)]],lam<=120);
+    out.at(-1).note='СП 64.13330: N/(φ·A·Rс) ≤ 1; λ ≤ 120 для стоек.';
+    push('notch','Врубка стропила на прогоне',`глубина ${R(pu.notch)} мм`,`стропило ${M.br}×${M.hr} опирается на прогон шириной ${pu.pb} мм при уклоне ${M.deg}°`,pu.notch/(M.hr/3),[['Глубина врубки, мм',R(pu.notch)],['Предел по СП 64.13330 (1/3 h), мм',R(M.hr/3)],['Рекомендуемый предел (1/4 h), мм',R(M.hr/4)]]);
+    out.at(-1).note='СП 64.13330: глубина врубки в опорных узлах — не более 1/3 высоты сечения. Если врубка глубже — подбалка (кобылка) или опорный брусок вместо врубки.';
+    const R1=qRf*sR*Lh/1000/2*1000,Ab=M.br*pu.pb/2,sg=R1/Ab;
+    push('bearing','Смятие стропила на прогоне',`площадка ${M.br}×${R(pu.pb/2)}`,`опорная реакция стропила ${fmt(R1/1000,2)} кН`,sg/Rcm90,[['Напряжение смятия, МПа',fmt(sg,2)],['Rсм.90 поперёк волокон, МПа',Rcm90]]);
+    out.at(-1).note='СП 64.13330: смятие поперёк волокон в опорных частях и узловых примыканиях, Rсм.90 = 3 МПа.'}
+  else if(M.gable&&!M.mans){/* висячая: коньковый узел и нижний узел стропило — затяжка */
+    const B=M.B/1000,tn=M.tn,Hn=qRf*sR*B/(4*tn),d4=.4,Tn=c=>Math.min(.35*c*d4,Math.min(2.5*d4*d4+.01*c*c,4*d4*d4)),Tt=Tn(M.br/10),nT=Math.max(4,Math.ceil(Hn/Tt));
+    push('node_tie','Нижний узел: стропило — затяжка (балка перекрытия)',`${nT} гвоздей 4×100`,`распор от пары стропил ${fmt(Hn,2)} кН`,nT/12,[['Распор H = q·s·B/(4·tg α), кН',fmt(Hn,2)],['Несущая способность гвоздя 4×100, кН',fmt(Tt,2)],['Нужно гвоздей в узел',nT],['Допустимо в узле без болтов',12]]);
+    out.at(-1).note='СП 64.13330: T = min(0,35·c·d; 2,5·d² + 0,01·a² ≤ 4·d²). При большем числе гвоздей — болт М12 с шайбами или металлическая пластина.';
+    const V=l.S*1.4*sR*B/8,Tr=Tn(2.5),nR=Math.max(4,Math.ceil(V/(2*Tr)));
+    push('node_ridge','Коньковый узел: накладки на стропилах',`накладки 25×100, ${nR} гв. на сторону`,`поперечная сила при одностороннем снеге ${fmt(V,2)} кН`,nR/10,[['Сила в узле V = S·s·B/8, кН',fmt(V,2)],['Гвоздь через накладку 25 мм, кН',fmt(Tr,2)],['Гвоздей в каждое стропило (накладки с двух сторон)',nR]]);
+    out.at(-1).note='Пару стропил на коньке соединяют накладками из доски 25×100 с двух сторон на гвоздях или болтом М12. Коньковая доска — не несущий элемент.'}
+  /* крылья: ендовная балка и балки перекрытия крыла */
+  (M.wingRoofs||[]).forEach(r=>{const k=r.k,iw=k.i+1;
+    const Lw=k.Wd-M.d;if(Lw>M.La+1){const b=M.ba,h=M.ha,qd=(l.gA*1.2+l.pA*1.3)*sR+SELF*b*h*1.1,qn=(l.gA+l.pA)*sR+SELF*b*h,c=bend({b,h,L:Lw,qd,qn,lim:200});
+      push('attic_w'+iw,`Балка перекрытия крыла ${iw}`,`${b}×${h}`,`пролёт ${fmt(Lw/1000,2)} м`,c.u,[['Нагрузка расч., кН/м',fmt(qd,2)],['σ / R, МПа',fmt(c.sig,1)+' / '+R_I],['Прогиб f / fпред, мм',fmt(c.f,1)+' / '+fmt(c.fl,1)]])}
+    if(!r.W2){const h2=k.Wd/2,Lp=h2*Math.SQRT2,L3=Math.hypot(Lp,h2*M.tn),Wd=qRf*1e-3*h2*h2/2,Wn=qRn*1e-3*h2*h2/2,b2=2*M.br,h=M.hr;
+      const Mm=Wd*Lp/8,Ws=b2*h*h/6,I=b2*h**3/12,sig=Mm/Ws,f=5*Wn*L3**3/(384*E_MOD*I),fl=L3/200;
+      push('valley'+iw,`Ендовная балка крыла ${iw}`,`2×${M.br}×${h}`,`длина ${fmt(L3/1000,2)} м · собирает нагрузку с нарожников двух скатов`,Math.max(sig/R_I,f/fl),[['Нагрузка на балку (2 треугольника), кН',fmt(Wd/1000,2)],['Момент M, кН·м',fmt(Mm/1e6,2)],['σ / R, МПа',fmt(sig,1)+' / '+R_I],['Прогиб f / fпред (L/200), мм',fmt(f,1)+' / '+fmt(fl,1)]]);
+      out.at(-1).note='Упрощённо: ендовная балка — однопролётная, от угла стен до конька крыла, нагрузка с нарожников обоих скатов. Верхний конец опирается на ригель между стропилами дома.'}});
   if(Pk>0){const b=M.b,d=M.kneeD,Hs=M.kneeH-M.np*M.t,Ar=b*d,lam=Hs/(.289*d),phi=lam<=70?1-.8*(lam/100)**2:3000/lam**2,u=Pk/(phi*Ar*R_C);
    push('knee','Стойка стенки мансарды',`${b}×${d}`,`под каждым стропилом, шаг ${M.sr} мм · высота ${M.kneeH} мм`,u,[['Сжатие N, кН',fmt(Pk/1000,2)],['Гибкость λ (пред. 120)',fmt(lam,0)],['φ',fmt(phi,2)]],lam<=120)}
   // лаги пола
@@ -1037,6 +1074,10 @@ function hCalc(M,l,pc,g){
   out.push({id:'rafter_up',h:true,title:'Отрыв стропил ветром',sec:'2 крепления на узел',meta:`отсос на скате c = −0,6 · шаг ${M.sr} мм`,u:up<=0?0:up/(2*T_RAFTER_FIX),ok:up<=2*T_RAFTER_FIX,
     rows:[['Отрывающая сила на стропило, кН',fmt(Math.max(0,up),2)],['Несущая способность уголка или скобы, кН',fmt(T_RAFTER_FIX,1)],['Нужно креплений на узел',Math.max(2,Math.ceil(Math.max(0,up)/T_RAFTER_FIX))]],
     note:'Стропило крепят к обвязке уголком и скобой (или скруткой к стойке). Значения креплений — типовые, сверяйте с паспортом изделия.'});
+  if(M.purlin){const ur=Math.max(0,up)/2,nr=Math.max(2,Math.ceil(ur/T_RAFTER_FIX));
+    out.push({id:'ridge_fix',h:true,title:'Крепление стропил к коньковому прогону',sec:`${nr} крепления на стропило`,meta:'отрыв ветром в верхнем узле',u:ur/(2*T_RAFTER_FIX),ok:ur<=2*T_RAFTER_FIX,
+      rows:[['Отрывающая сила в верхнем узле, кН',fmt(ur,2)],['Несущая способность скобы или уголка, кН',fmt(T_RAFTER_FIX,1)],['Креплений на стропило',nr]],
+      note:'Каждое стропило: врубка на прогон, 2 гвоздя 4×100 наискось и скоба или уголок; пару стропил над прогоном стягивают накладками 25×100.'})}
   return {Fx,Fy,hx,hy,walls,checks:out,ov};
 }
 function vSummary(M,l){
@@ -1063,6 +1104,9 @@ function getPicks(id){
     case 'lintel':return [2,3].flatMap(n=>hs(r=>r.h>=120).map(h=>({lintelPly:n,lintelH:h,_a:n*h*h}))).sort((a,c)=>a._a-c._a).map(({_a,...x})=>x);
     case 'rack_x':case 'rack_y':return [{nailStep:100},{bracing:'sheathing'},{bracing:'sheathing',nailStep:100},{bracing:'sheathing',sheathMat:'osb12'},{bracing:'sheathing',sheathMat:'osb12',nailStep:100}].filter(x=>!(x.bracing&&P.bracing==='sheathing'&&!x.sheathMat&&!x.nailStep));
     case 'overturn':return pileCands('heave');
+    case 'purlin':case 'bearing':return dbRows('beam').filter(r=>r.b>=+P.purB||id==='purlin').map(r=>({purB:r.b,purH:r.h}));
+    case 'post':return dbRows('beam').map(r=>({postB:r.b,postH:r.h}));
+    case 'notch':return [...dbRows('beam').filter(r=>r.b<+P.purB).map(r=>({purB:r.b,purH:r.h})),...fr(r=>r.b>=40&&r.h>+P.rafterH).map(r=>({rafterB:r.b,rafterH:r.h}))];
     case 'pile':case 'heave':return pileCands(id);
   }
   return null;
@@ -1074,6 +1118,7 @@ const rdesc=p=>[p.bracing==='sheathing'?'плитная обшивка вмес�
 function describePatch(id,p){
   const m={rafter:()=>`стропило ${p.rafterB}×${p.rafterH}`,attic:()=>`балка чердака ${p.attB}×${p.attH}`,joist:()=>`лага ${p.joistB}×${p.joistH}`,
     beam_extX:()=>bdesc(p),beam_extY:()=>bdesc(p),beam_mid:()=>bdesc(p),rack_x:()=>rdesc(p),rack_y:()=>rdesc(p),overturn:()=>pileDesc(p),
+    purlin:()=>`коньковый прогон ${p.purB}×${p.purH}`,bearing:()=>`коньковый прогон ${p.purB}×${p.purH}`,post:()=>`стойка под прогон ${p.postB}×${p.postH}`,notch:()=>p.purB?`прогон ${p.purB}×${p.purH}`:`стропило ${p.rafterB}×${p.rafterH}`,
     stud:()=>`стойка ${p.studB}×${p.studH}${p.studS?`, шаг ${p.studS}`:''}`,stud_int:()=>`стойка перегородки ${P.studB}×${p.partH}${p.partS?`, шаг ${p.partS}`:''}`,
     lintel:()=>`перемычка ${p.lintelPly}×${P.studB}×${p.lintelH}`,knee:()=>`стойка стенки мансарды ${P.studB}×${p.kneeD}`,pile:()=>pileDesc(p),heave:()=>pileDesc(p)};
   return (m[id]||(()=>JSON.stringify(p)))();
@@ -1274,6 +1319,8 @@ function advice(M,C,S){
   if(['III','IV','V','VI','VII'].includes(windReg(P))) add('info','Ветровой район '+windReg(P),'Каждое стропило крепите к обвязке металлическим уголком и проволочной скруткой к стойке стены. Кровельные саморезы ставьте в каждую волну на карнизе и коньке.');
   if(!M.gable&&M.Hr>0) add('info','Односкатная крыша: надстройка','Над стеной 3 собирается каркасная надстройка высотой '+R(M.Hr)+' мм. Её нужно раскрепить OSB и связать со стропилами.');
   if(M.A>6000) add('info','Стыки обвязок','Обвязки длиннее 6 м собираются из нескольких досок. Стыки нижней и верхней доски разносите минимум на 1,2 м (две стойки).');
+  if(M.purlin){add('info','Наслонная система с коньковым прогоном',`Стропила опираются на обвязку стен и на коньковый прогон ${M.pur.pb}×${M.pur.ph}; прогон — на стойки ${M.pur.qb}×${M.pur.qh} с шагом до ${fmt(M.pur.span/1000,2)} м, стойки — на лежень. Узел на прогоне: врубка ${R(M.pur.notch)} мм (не глубже 1/3 h по СП 64.13330), 2 гвоздя 4×100 наискось и скоба или уголок; пары стропил над прогоном стягивают накладками. На обвязке стропило крепят так, чтобы оно не давало распора (врубка с упором, уголок). Стойки раскрепляют подкосами к лежню под 45°.`);
+    if(!M.pur.onWall) add('warn','Стойки прогона стоят на балках перекрытия','Под коньком нет несущей перегородки: нагрузка со стоек через лежень идёт на балки перекрытия посередине пролёта (это учтено в проверке балок). Надёжнее поставить несущую перегородку вдоль дома под коньком — или вернуться к висячей системе (кнопка «Применить»).',{rafterSys:'hang'})}
   if(!out.some(a=>a.lvl==='bad')) out.unshift({lvl:'ok',title:'Все проверки пройдены',text:'Сечения проходят по прочности и прогибу при заданных нагрузках. Расчёт упрощённый — финальный проект согласуйте с инженером.'});
   const ord={bad:0,ok:1,warn:2,info:3}; out.sort((a,c)=>ord[a.lvl]-ord[c.lvl]);
   return out;
@@ -1378,7 +1425,11 @@ const FORM=[
     {k:'rafterSec',l:'Стропило',type:'sec',keys:['rafterB','rafterH'],rows:()=>frameRows(r=>r.b>=40&&r.h>=120)},
     {k:'rafterS',l:'Шаг стропил',u:'мм',min:300,max:1200,step:5},
     {k:'attSec',l:'Балка перекрытия',type:'sec',keys:['attB','attH'],rows:()=>frameRows(r=>r.b>=40&&r.h>=120)},
-    {k:'strut',l:'Стойки под стропила в середине пролёта',type:'chk',show:()=>!P.mansard},
+    {k:'rafterSys',l:'Стропильная система',type:'sel',opts:[['hang','Висячая — балки перекрытия работают затяжками'],['purlin','Наслонная — коньковый прогон на стойках']],wide:true,show:()=>!P.mansard&&P.roof!=='shed'},
+    {k:'purSec',l:'Коньковый прогон (брус)',type:'sec',keys:['purB','purH'],rows:()=>dbRows('beam'),show:()=>P.rafterSys==='purlin'&&!P.mansard&&P.roof!=='shed'},
+    {k:'postSec',l:'Стойка и лежень (брус)',type:'sec',keys:['postB','postH'],rows:()=>dbRows('beam'),show:()=>P.rafterSys==='purlin'&&!P.mansard&&P.roof!=='shed'},
+    {k:'postS',l:'Шаг стоек прогона',u:'мм',min:1500,max:6000,step:100,show:()=>P.rafterSys==='purlin'&&!P.mansard&&P.roof!=='shed'},
+    {k:'strut',l:'Стойки под стропила в середине пролёта',type:'chk',show:()=>!P.mansard&&P.rafterSys!=='purlin'},
     {k:'mansard',l:'Мансарда — жилой этаж под крышей',type:'chk',show:()=>P.roof!=='shed'},
     {k:'kneeH',l:'Высота стенки мансарды',u:'мм',min:600,max:2000,step:50,show:()=>P.mansard&&P.roof!=='shed'},
     {k:'mansH',l:'Высота потолка мансарды',u:'мм',min:2100,max:3200,step:50,show:()=>P.mansard&&P.roof!=='shed'},
@@ -1461,7 +1512,7 @@ function renderSide(){
       if(k==='freeze')P.freezeAuto=false;
       if(k==='soil'&&P.freezeAuto&&P.site){const f=freezeFromSite(P);if(f){P.freeze=f;setTimeout(renderSide,0)}}
       if(k==='bracing'||k==='beamType'){if(k==='beamType')mapToDb();setTimeout(renderSide,0)} if(k==='pile') document.querySelector('.fld[data-k="pileFd"]').hidden=P.pile!=='manual';
-      if(k==='roof'||k==='mansard'){setTimeout(()=>{renderSide();},0)}
+      if(k==='roof'||k==='mansard'||k==='rafterSys'){setTimeout(()=>{renderSide();},0)}
       schedule();
     })});
   renderOps(); renderIW(); renderBlocks(); renderRooms(); renderFile(); renderSite();
@@ -1996,7 +2047,9 @@ function sheetRoof(){
     g+=Rc(Xs(M.yT),Zs(M.zc+150),(B-2*M.yT)/s,150/s,'w3');g+=Tx(Xs(B/2),Zs(M.zm+M.mansH/2),'МАНСАРДА',{size:3,cls:'b'})}
   M.slopes.forEach(sl=>{const ze=sl.zA,zr=sl.zB,yy=sl.y1,o=hr/cs;g+=Pg([[Xs(sl.y0),Zs(ze)],[Xs(yy),Zs(zr)],[Xs(yy),Zs(zr+o)],[Xs(sl.y0),Zs(ze+o)]],'w2');
     const ofr=(hr+(M.mat.counter?M.mat.counter[0]:0)+M.mat.lath[0]+8)/cs;g+=Ln(Xs(sl.y0),Zs(ze+ofr),Xs(yy),Zs(zr+ofr),'m')});
-  if(M.gable)g+=Rc(Xs(B/2-br/2),Zs(M.zRidge),br/s,hr/s,'w3');
+  if(M.purlin){const pu=M.pur;g+=Rc(Xs(B/2-pu.pb/2),Zs(pu.zPt),pu.pb/s,pu.ph/s,'w3')+Rc(Xs(B/2-pu.qh/2),Zs(pu.zPt-pu.ph),pu.qh/s,pu.Lpost/s,'w2')+Rc(Xs(B/2-pu.qh/2),Zs(M.zt+M.ha+pu.qb),pu.qh/s,pu.qb/s,'w2');
+    g+=Ln(Xs(B/2)+pu.pb/2/s,Zs(pu.zPt-pu.ph/2),Xs(B/2)+pu.pb/2/s+14,Zs(pu.zPt-pu.ph/2)-6)+Tx(Xs(B/2)+pu.pb/2/s+15,Zs(pu.zPt-pu.ph/2)-6.6,`КП ${pu.pb}×${pu.ph}, врубка ${R(pu.notch)}`,{a:'start',size:2.1})+Tx(Xs(B/2)+pu.qh/2/s+1.5,Zs(pu.zPt-pu.ph-pu.Lpost/2),`СТК ${pu.qb}×${pu.qh}`,{a:'start',size:2.1})}
+  else if(M.gable)g+=Rc(Xs(B/2-br/2),Zs(M.zRidge),br/s,hr/s,'w3');
   M.strutY.forEach(y=>g+=Rc(Xs(y-br/2),Zs(M.zU(y)),br/s,(M.zU(y)-M.zr0)/s,'w3'));
   const a0=Xs(0)+(M.gable?14:16),z0p=Zs(M.zr0);g+=`<path d="M${f2(Xs(0)+12)} ${f2(z0p)} A12 12 0 0 0 ${f2(Xs(0)+12*Math.cos(M.al))} ${f2(z0p-12*Math.sin(M.al))}" class="t"/>`+Ln(Xs(0),z0p,Xs(0)+15,z0p)+Tx(a0+1,z0p-2,`${M.deg}°`,{size:2.4,a:'start'});
   g+=chainH([-ov,0,B,B+ov],Xs,Zs(zMin)+7,null);g+=chainH([0,...M.lines.filter(l=>l.axis==='x'&&l.wing==null).map(l=>l.c),B],Xs,Zs(zMin)+15,null);
@@ -2007,14 +2060,15 @@ function sheetRoof(){
   g+=Tx(pxP+Wpl/s/2,17,`План стропильной системы  М 1:${s}`,{size:3.4,cls:'b'});
   g+=Rc(Xp(-og),Yp(B+ov),Wpl/s,Hpl/s,'m')+Rc(Xp(0),Yp(B),A/s,B/s,'hd');
   [...M.xsR,...M.barge].forEach(x=>g+=Rc(Xp(x-br/2),Yp(B+ov),br/s,Hpl/s,'w'));
-  if(M.gable)g+=Rc(Xp(-og),Yp(B/2)-br/2/s,Wpl/s,br/s,'w3')+Ln(Xp(-og)-3,Yp(B/2),Xp(A+og)+3,Yp(B/2),'ax');
+  if(M.purlin){g+=Rc(Xp(-og),Yp(B/2)-M.pur.pb/2/s,Wpl/s,M.pur.pb/s,'w3')+Ln(Xp(-og)-3,Yp(B/2),Xp(A+og)+3,Yp(B/2),'ax');M.pur.xs.forEach(x=>g+=Rc(Xp(x)-M.pur.qb/2/s,Yp(B/2)-M.pur.qh/2/s,M.pur.qb/s,M.pur.qh/s,'blk'))}
+  else if(M.gable)g+=Rc(Xp(-og),Yp(B/2)-br/2/s,Wpl/s,br/s,'w3')+Ln(Xp(-og)-3,Yp(B/2),Xp(A+og)+3,Yp(B/2),'ax');
   M.strutY.forEach(y=>g+=Ln(Xp(0),Yp(y),Xp(A),Yp(y),'hd'));
   const xc=A/2;g+=Ln(Xp(xc),Yp(B+ov)-6,Xp(xc),Yp(B+ov)-1,'m')+Ln(Xp(xc),Yp(-ov)+1,Xp(xc),Yp(-ov)+6,'m')+Tx(Xp(xc)+2.5,Yp(B+ov)-3,'1',{size:3})+Tx(Xp(xc)+2.5,Yp(-ov)+5.5,'1',{size:3});
   g+=chainH([-og,...M.barge,...M.xsR,A+og],Xp,Yp(-ov)+8,Yp(-ov))+dimH(Xp(-og),Xp(A+og),Yp(-ov)+16,Yp(-ov),R(A+2*og));
   g+=chainV([-ov,0,...(M.gable?[B/2]:[]),B,B+ov],Yp,Xp(-og)-8,Xp(-og));
   const rm=M.mem.find(m=>m.role==='СН');
   g+=tableBlock(25,240,200,48,'Стропильная система и чердак',MARK_COLS,markRows(x=>x.grp==='roof'||x.grp==='attic'||x.grp==='lath'));
-  const nt=[`Покрытие: ${M.mat.name}. Обрешётка ${M.mat.lath.join('×')} с шагом ${M.mat.step} мм${M.mat.counter?`, контробрешётка ${M.mat.counter.join('×')}`:''}.`,`Балки чердака БП — по осям стропил, шаг ${M.sr} мм; соединить со стропилами в нижнем узле.`,rm?`Длина стропила ${rm.mark} дана с запасом на запилы.`:''];
+  const nt=[`Покрытие: ${M.mat.name}. Обрешётка ${M.mat.lath.join('×')} с шагом ${M.mat.step} мм${M.mat.counter?`, контробрешётка ${M.mat.counter.join('×')}`:''}.`,M.purlin?`Стропила — на обвязку и коньковый прогон КП (врубка ${R(M.pur.notch)} мм, 2 гв. 4×100 + скоба); стойки СТК шаг до ${fmt(M.pur.span/1000,2)} м на лежне ЛЖ.`:`Балки чердака БП — затяжки по осям стропил, шаг ${M.sr} мм. Нижний узел — ${C.checks.find(c=>c.id==='node_tie')?.sec||'гвозди по расчёту'}; конёк — ${C.checks.find(c=>c.id==='node_ridge')?.sec||'накладки'}.`,rm?`Длина стропила ${rm.mark} дана с запасом на запилы.`:''];
   nt.forEach((t,i)=>g+=Tx(pxP,226+i*3.6-(nt.length-1)*3.6+0,t,{a:'start',size:2.1}));
   return {code:'КР-1',title:'Стропильная система',sub:`${M.gable?'Двускатная':'Односкатная'}, уклон ${M.deg}°, ${M.mat.name.toLowerCase()}`,scale:s,body:g};
 }
