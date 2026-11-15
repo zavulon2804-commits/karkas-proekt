@@ -400,7 +400,7 @@ const ROLE={
   'НО':'Нижняя обвязка','ВО':'Верхняя обвязка','С':'Стойка','СП':'Стойка проёма опорная','СК':'Стойка укороченная',
   'ПР':'Перемычка (доска на ребро)','Р':'Ригель подоконный','УК':'Укосина (раскос) врезная','ИО':'Обрешётка инсталляционного слоя','УТ':'Доска тёплого угла / примыкания (плашмя)','СФ':'Стойка фронтона / надстройки','ОФ':'Обвязка надстройки',
   'БП':'Балка перекрытия (чердак / мансарда)','СН':'Стропильная нога','СНФ':'Стропило фронтонного свеса','КБ':'Коньковая доска','ПК':'Стойка под стропило',
-  'КР':'Контробрешётка','ОР':'Обрешётка','ВД':'Ветровая доска','ЛД':'Лобовая доска','РГ':'Ригель (затяжка) мансарды'
+  'НР':'Нарожник (укороченное стропило у ендовы)','ЕН':'Ендовная балка (сдвоенная)','КР':'Контробрешётка','ОР':'Обрешётка','ВД':'Ветровая доска','ЛД':'Лобовая доска','РГ':'Ригель (затяжка) мансарды'
 };
 const ROLE_ORDER=Object.keys(ROLE);
 const GRP={
@@ -615,11 +615,11 @@ function build(P,OPT={}){
     const yM=[...Array(nW)].map((_,q)=>yA+(q+1)*(yB-yA)/(nW+1)),lj=(yB-yA)/(nW+1);
     const xsW=div(xa,xb),ysK=[yA,...yM,yB];let ysW=[yA];for(let q=0;q<ysK.length-1;q++)ysW.push(...div(ysK[q],ysK[q+1]).slice(1));
     const tg='Крыло '+(k.i+1)+': ',xl=[];
-    if(W2)xl.push({c:yA,kind:'extX',name:tg+'балка под боковой стеной'});
-    xl.push({c:yB,kind:'extX',name:tg+(W2?'балка под боковой стеной':'балка под торцевой стеной')});
+    if(W2)xl.push({c:yA,kind:'extX',bear:true,name:tg+'балка под боковой стеной'});
+    xl.push({c:yB,kind:'extX',bear:W2,gab:!W2,name:tg+(W2?'балка под боковой стеной':'балка под торцевой стеной')});
     yM.forEach((y,q)=>xl.push({c:y,kind:'mid',name:tg+'промежуточная балка '+(q+1)}));
     xl.forEach((l,q)=>M.lines.push({id:'K'+(k.i+1)+'X'+(q+1),axis:'x',pts:xsW,lj,wing:k.i,...l}));
-    (W2?[{c:xb,name:tg+'балка под торцевой стеной'}]:[{c:xa,name:tg+'балка под боковой стеной'},{c:xb,name:tg+'балка под боковой стеной'}]).forEach((l,q)=>M.lines.push({id:'K'+(k.i+1)+'Y'+(q+1),kind:'extY',axis:'y',pts:ysW,lj,wing:k.i,...l}));
+    (W2?[{c:xb,gab:true,name:tg+'балка под торцевой стеной'}]:[{c:xa,bear:true,name:tg+'балка под боковой стеной'},{c:xb,bear:true,name:tg+'балка под боковой стеной'}]).forEach((l,q)=>M.lines.push({id:'K'+(k.i+1)+'Y'+(q+1),kind:'extY',axis:'y',pts:ysW,lj,wing:k.i,...l}));
     k.grill={yA,yB,xa,xb,yM,xsW,ysW,lj,nMid:nW}});
   M.lines.forEach(l=>{l.span=Math.max(...l.pts.slice(1).map((p,i)=>p-l.pts[i]))});
   const pm=new Map();
@@ -678,7 +678,14 @@ function build(P,OPT={}){
       M.walls.push(mkW(id,'Перегородка '+id,c,f,0,1,e-f,-f,false,dp,ps,!!iw.bearing));
     }
   });
+  /* крыши крыльев: двускатные, тот же уклон и высота карниза; крыло сзади — конёк поперёк основного, две ендовы */
+  M.wingRoofs=[];
+  M.wings.forEach(k=>{if(!gable){M.errs.push({wall:'K'+(k.i+1),msg:`Крыша крыла ${k.i+1} не построена: крыши крыльев делаются при двускатной крыше дома`});return}
+    if(k.side==='W3'&&k.Wd>B){M.errs.push({wall:'K'+(k.i+1),msg:`Крыша крыла ${k.i+1} не построена: крыло шире дома (${k.Wd} > ${B} мм) — его конёк оказался бы выше основного. Уменьшите ширину крыла`});return}
+    M.wingRoofs.push({k,half:k.Wd/2,W2:k.side==='W2',xc:(k.x0+k.x1)/2,yc:(k.y0+k.y1)/2})});
   if(gable){const zb=M.mans?M.zm:zr0;
+    M.wingRoofs.forEach(r=>{const k=r.k,id='GК'+(k.i+1),nm=`Фронтон крыла ${k.i+1}`,w=r.W2?mkW(id,nm,k.x1-d/2,k.y0,0,1,k.Wd,0,true,d,ss,false):mkW(id,nm,k.x0,k.y1-d/2,1,0,k.Wd,0,true,d,ss,false);
+      w.gable=true;w.wingGable=true;w.zb=zr0;w.top=u=>Math.min(u,k.Wd-u)*tn;w.ridgeH=R(r.half*tn+hr/cs);M.walls.push(w)});
     [['G4','Фронтон 4 (левый)',d/2],['G2','Фронтон 2 (правый)',A-d/2]].forEach(([id,name,x])=>{const w=mkW(id,name,x,0,0,1,B,0,true,d,ss,false);w.gable=true;w.zb=zb;w.top=u=>zU(u)-zb;M.walls.push(w)});
     if(M.mans&&M.mansOk)[['K1','Стенка мансарды 1',M.yk],['K3','Стенка мансарды 3',B-M.yk]].forEach(([id,name,y])=>{const w=mkW(id,name,d,y,1,0,A-2*d,-d,false,M.kneeD,sr,true);w.zb=M.zm;w.H=M.kneeH;w.knee=true;M.walls.push(w)})}
   // угловые стойки и стойки примыкания
@@ -753,7 +760,9 @@ function build(P,OPT={}){
   M.slopes=slopes;
   const at=(sl,x,s,off)=>[x,sl.y0+sl.e[1]*s+sl.n[1]*off,sl.zA+sl.e[2]*s+sl.n[2]*off];
   const Lraf=r10(M.Ls+hr*tn);
-  slopes.forEach(sl=>{[...xsR.map(x=>[x,'СН']),...barge.map(x=>[x,'СНФ'])].forEach(([x,role])=>bar('roof',role,[br,hr],1,at(sl,x,0,hr/2),at(sl,x,sl.len,hr/2),sl.n,hr,br,{L:Lraf}))});
+  const cutS=(sl,x)=>{if(!gable||sl.dir>0)return 0;let sv=0;(M.wingRoofs||[]).filter(r=>!r.W2).forEach(r=>{const dx=Math.abs(x-r.xc);if(dx<r.half+ov){const yv=B-r.half+dx;sv=Math.max(sv,(B+ov-yv)/cs)}});return sv};
+  slopes.forEach(sl=>{[...xsR.map(x=>[x,'СН']),...barge.map(x=>[x,'СНФ'])].forEach(([x,role])=>{const sv=cutS(sl,x);if(sv>=sl.len-80)return;
+    bar('roof',sv>0?'НР':role,[br,hr],1,at(sl,x,sv,hr/2),at(sl,x,sl.len,hr/2),sl.n,hr,br,{L:sv>0?r10(sl.len-sv+hr*tn):Lraf})})});
   M.zRidge=gable?zr0+B/2*tn+hr/cs:zr0+(B+ov)*tn+hr/cs;
   if(gable){const zTop=zr0+B/2*tn+hr/cs;bar('roof','КБ',[br,hr],1,[-og,B/2,zTop-hr/2],[A+og,B/2,zTop-hr/2],[0,0,1],hr,br,{splitAt:rel(xsR,-og)})}
   if(M.mans&&M.mansOk){const hc=150,yT=(M.zc+hc/2-zr0-hr/cs)/tn;M.yT=yT;xsR.forEach(x=>bar('mans','РГ',[50,hc],1,[x+br,yT,M.zc+hc/2],[x+br,B-yT,M.zc+hc/2],[0,0,1],hc,50,{}))}
@@ -773,6 +782,31 @@ function build(P,OPT={}){
     bar('lath','ЛД',[25,150],1,[-og,ye,ze],[A+og,ye,ze],[0,0,1],150,25,{splitAt:rel([...xsR,...barge],-og)});
   });
   M.roofArea=slopes.reduce((s,sl)=>s+sl.len*(A+2*og),0)/1e6;
+  /* крыши крыльев */
+  const zE=zr0-ov*tn,offC=hr+(cb?cb[0]:0)+lt[0]+6;
+  const rafter=(px,py,ux,uy,t0,t1,role,n=1)=>{const nn=[-ux*sn,-uy*sn,cs],B0=t=>[px+ux*t,py+uy*t,zE+t*tn],q=(t,o)=>{const b=B0(t);return [b[0]+nn[0]*o,b[1]+nn[1]*o,b[2]+nn[2]*o]};
+    return {nn,q,m:role?bar('roof',role,[br,hr],n,q(t0,hr/2),q(t1,hr/2),nn,hr,br*n,{L:r10((t1-t0)/cs+hr*tn)}):null}};
+  M.roofInfo={eaves:gable?2*(A+2*og):(A+2*og),ridge:gable?A+2*og:0,valleys:0,valleyN:0};
+  M.wingRoofs.forEach(r=>{const k=r.k,h=r.half,T=h+ov,zRk=zr0+h*tn+hr/cs;
+    if(r.W2){const xe=k.x1+og,ts=grid(A+br/2,xe-br/2,sr,br,0);
+      ts.forEach((x,i)=>{const role=(i===ts.length-1&&og>=150)?'СНФ':'СН';rafter(x,k.y0-ov,0,1,0,T,role);rafter(x,k.y1+ov,0,-1,0,T,role);
+        if(x>A+br&&x<k.x1-br)bar('attic','БП',[ba,ha],1,[x,k.y0,za],[x,k.y1,za],[0,0,1],ha,ba,{})});
+      bar('roof','КБ',[br,hr],1,[A,r.yc,zRk-hr/2],[xe,r.yc,zRk-hr/2],[0,0,1],hr,br,{splitAt:rel(ts,A)});
+      [[k.y0-ov,1],[k.y1+ov,-1]].forEach(([ye,dir])=>{const f=rafter(0,ye,0,dir,0,T,null),rows=[];for(let s0=60;s0<T/cs-120;s0+=mat.step)rows.push(s0*cs);rows.push(T-60*cs);
+        rows.forEach(t=>{const a=f.q(t,hr+(cb?cb[0]:0)+lt[0]/2);bar('lath','ОР',[lt[0],lt[1]],1,[A,a[1],a[2]],[xe,a[1],a[2]],f.nn,lt[0],lt[1],{splitAt:rel(ts,A)})});
+        const c=f.q(T/2,offC);bar('cover',null,null,1,[A,c[1],c[2]],[xe,c[1],c[2]],f.nn,10,T/cs,{})});
+      M.roofArea+=2*T/cs*(xe-A)/1e6;M.roofInfo.eaves+=2*(xe-A);M.roofInfo.ridge+=xe-A;r.ridgeZ=zRk}
+    else{const ye=k.y1+og,yApex=B-h,ts=grid(yApex+br,ye-br/2,sr,br,0);
+      ts.forEach((y,i)=>{const t0=Math.max(0,B+ov-y);if(t0>T-80)return;const role=t0>0?'НР':(i===ts.length-1&&og>=150)?'СНФ':'СН';
+        rafter(k.x0-ov,y,1,0,t0,T,role);rafter(k.x1+ov,y,-1,0,t0,T,role);
+        if(y>B+ba&&y<k.y1-ba)bar('attic','БП',[ba,ha],1,[k.x0,y,za],[k.x1,y,za],[0,0,1],ha,ba,{})});
+      bar('roof','КБ',[br,hr],1,[r.xc,yApex,zRk-hr/2],[r.xc,ye,zRk-hr/2],[0,0,1],hr,br,{splitAt:rel(ts,yApex)});
+      const zA=zr0+h*tn;[[k.x0-ov],[k.x1+ov]].forEach(([xe])=>{const p0=[r.xc,yApex,zA+hr/2],p1=[xe,B+ov,zE+hr/2],L=dist3(p0,p1);bar('roof','ЕН',[br,hr],2,p0,p1,[0,0,1],hr,2*br,{L:r10(L+hr)});M.roofInfo.valleys+=L;M.roofInfo.valleyN++});
+      [[k.x0-ov,1],[k.x1+ov,-1]].forEach(([xe,dir])=>{const f=rafter(xe,0,dir,0,0,T,null),rows=[];for(let s0=60;s0<T/cs-120;s0+=mat.step)rows.push(s0*cs);rows.push(T-60*cs);
+        rows.forEach(t=>{const a=f.q(t,hr+(cb?cb[0]:0)+lt[0]/2),y0=Math.min(ye,B+ov-t);bar('lath','ОР',[lt[0],lt[1]],1,[a[0],y0,a[2]],[a[0],ye,a[2]],f.nn,lt[0],lt[1],{splitAt:rel(ts,y0)})});
+        const c=f.q(T/2,offC);bar('cover',null,null,1,[c[0],B+ov,c[2]],[c[0],ye,c[2]],f.nn,10,T/cs,{})});
+      M.roofArea+=2*T/cs*(ye-(B+ov))/1e6;M.roofInfo.eaves+=2*(ye-(B+ov))-(k.Wd+2*ov);M.roofInfo.ridge+=ye-yApex;r.ridgeZ=zRk}});
+
   M.rooms=detectRooms(M,P);
   return M;
 }
@@ -901,6 +935,9 @@ function calc(M){
     else{qd+=fl*lj/1000;qn+=fln*lj/1000;
       const iw=M.walls.find(w=>!w.ext&&w.ux&&Math.abs(w.y0-L.c)<=300);
       if(iw){const g=iw.bearing?l.gW:.3;qd+=g*1.2*M.H/1000;qn+=g*M.H/1000;if(M.attSup!=null&&Math.abs(M.attSup-iw.y0)<1){qd+=supAtt;qn+=supAttN}L.wallOver=iw.id}}
+    if(L.wing!=null){const wr=(M.wingRoofs||[]).find(r=>r.k.i===L.wing);if(wr){const k=wr.k,trR=(k.Wd/2+M.ov)/1000,at=(k.Wd-M.d)/2/1000,gh=k.Wd/2*M.tn/2;
+      if(L.bear){qd+=(l.gR/cs*1.1+l.S*1.4)*trR+(l.gA*1.2+l.pA*1.3)*at;qn+=(l.gR/cs+l.S)*trR+(l.gA+l.pA)*at;L.qg+=l.gR/cs*trR+l.gA*at}
+      if(L.gab){qd+=l.gW*1.2*gh/1000;qn+=l.gW*gh/1000;L.qg+=l.gW*gh/1000}}}
     L.qd=qd;L.qn=qn;
   });
   const pc=pileCap(P,M),t=M.pileT,selfP=t.kind==='screw'||t.kind==='manual'?.35:(t.kind==='driven'?(t.a/1000)**2:Math.PI*(t.d/1000)**2/4)*M.pileLen/1000*25;
@@ -1171,7 +1208,9 @@ function advice(M,C,S){
   const P=M.P,l=C.l,out=[];
   const add=(lvl,title,text,patch,pid)=>out.push({lvl,title,text,patch,pid});
   M.errs.forEach(e=>add('bad',e.msg,/^K/.test(e.wall)?'Исправьте размеры в шаге «Крылья дома».':'Проверьте координату и границы перегородки во вкладке «Внутренние стены».'));
-  if(M.wings&&M.wings.length) add('warn','Крылья дома: пока без крыши','Для крыльев построены наружные стены, проёмы, помещения, сваи, ростверк и пол — они входят в расчёт, спецификацию и смету. Крыша крыла добавляется следующим шагом: до этого балки ростверка крыла считаются без нагрузки от кровли. Стена основного дома на стыке остаётся внутренней несущей стеной — в ней можно сделать дверной проём.');
+  if(M.wingRoofs&&M.wingRoofs.some(r=>!r.W2)) add('warn','Ендовы на кровле',`Крыло сзади врезается в скат дома: ${M.roofInfo.valleyN} ендовы общей длиной ${fmt(M.roofInfo.valleys/1000,1)} м. Ендовная балка — сдвоенное стропило ${M.br}×${M.hr}, на неё опираются нарожники; под ендовой — сплошная обрешётка шириной 600 мм в каждую сторону, ендовная планка и уплотнитель. Узел ответственный — сечение ендовной балки проверьте с инженером.`);
+  if(M.wingRoofs&&M.wingRoofs.some(r=>r.W2)) add('info','Крыло у торца дома','Крыша крыла примыкает к фронтону дома ниже его кровли: по линии примыкания — примыкающая планка с заведением под обшивку фронтона, свес основной кровли над крылом сохраняется.');
+  if(false) add('warn','Крылья дома: пока без крыши','Для крыльев построены наружные стены, проёмы, помещения, сваи, ростверк и пол — они входят в расчёт, спецификацию и смету. Крыша крыла добавляется следующим шагом: до этого балки ростверка крыла считаются без нагрузки от кровли. Стена основного дома на стыке остаётся внутренней несущей стеной — в ней можно сделать дверной проём.');
   M.ops.filter(o=>!o.ok).forEach(o=>add('bad',`Проём №${o.i+1} на стене ${o.wall} не построен`,o.msg+'.'));
   C.checks.forEach(c=>{
     if(!c.ok){const p=pickFor(c.id);add('bad',`${c.title} не проходит по расчёту (${R(c.u*100)} %)`,p?`Подходит: ${describePatch(c.id,p)}. Можно также уменьшить шаг или пролёт.`:'Подходящего стандартного сечения не нашлось: уменьшите шаг, пролёт или добавьте опору.',p,c.id)}
@@ -1831,7 +1870,7 @@ function sheetPlan(){
 function sheetWall(wl,code){
   const ms=M.mem.filter(m=>m.wall===wl.id&&m.loc);
   const lo=m=>m.loc.kind==='v'?m.loc.u-m.loc.bw/2:Math.min(m.loc.u0,m.loc.u1),hi=m=>m.loc.kind==='v'?m.loc.u+m.loc.bw/2:Math.max(m.loc.u0,m.loc.u1);
-  const zb=wl.zb??M.z0,ctxGable=!!wl.top||(!M.gable&&(wl.id==='W2'||wl.id==='W4')),Hw=wl.H??M.H;
+  const zb=wl.zb??M.z0,ctxGable=(!!wl.top&&!wl.wingGable)||(!M.gable&&(wl.id==='W2'||wl.id==='W4')),Hw=wl.H??M.H;
   let u0=Math.min(0,...ms.map(lo)),u1=Math.max(wl.L,...ms.map(hi)),v1=Math.max(wl.top?0:Hw,...ms.map(m=>m.loc.v1)),vmin=0;
   if(ctxGable){u0=Math.min(u0,-M.ov-wl.y0);u1=Math.max(u1,M.B+M.ov-wl.y0);v1=Math.max(v1,M.zRidge-zb);vmin=Math.min(0,M.zt-zb)}
   else if(wl.ext){v1=Math.max(v1,M.H+M.ha)}
@@ -1860,7 +1899,7 @@ function sheetWall(wl,code){
   g+=chainH([0,...opE,wl.L],X,Y(0)+7,Y(0));
   g+=chainH([0,...studC,wl.L],X,Y(0)+15,Y(0));
   g+=dimH(X(0),X(wl.L),Y(0)+23,Y(0),R(wl.L));
-  const vv=wl.top?[0,R(M.zRidge-zb)]:[0,M.t,Hw-(M.np-1)*M.t,Hw];if(!wl.top&&(ctxGable||wl.ext))vv.push(M.H+M.ha);if(ctxGable&&!wl.top)vv.push(R(M.zRidge-M.z0));if(wl.id==='W3'&&!M.gable&&M.Hr)vv.push(R(M.H+M.ha+M.Hr));
+  const vv=wl.top?[0,R(wl.ridgeH??(M.zRidge-zb))]:[0,M.t,Hw-(M.np-1)*M.t,Hw];if(!wl.top&&(ctxGable||wl.ext))vv.push(M.H+M.ha);if(ctxGable&&!wl.top)vv.push(R(M.zRidge-M.z0));if(wl.id==='W3'&&!M.gable&&M.Hr)vv.push(R(M.H+M.ha+M.Hr));
   g+=chainV(vv,Y,X(u1)+8,X(Math.min(u1,wl.L)));g+=elev(X(u1)+12,Y(0),elvTxt(zb-M.z0))+(wl.top?'':elev(X(u1)+12,Y(Hw),elvTxt(zb-M.z0+Hw)));
   g+=tableBlock(25,240,200,48,'Элементы стены',MARK_COLS,(()=>{const mp=new Map();ms.forEach(m=>{if(!mp.has(m.mark))mp.set(m.mark,{m,q:0});mp.get(m.mark).q+=m.n});return [...mp.values()].sort((a,c)=>ROLE_ORDER.indexOf(a.m.role)-ROLE_ORDER.indexOf(c.m.role)||a.m.mark.localeCompare(c.m.mark,'ru',{numeric:true})).map(({m,q})=>[m.mark,ROLE[m.role],m.sec.join('×'),fmt(r10(m.L)),q])})());
   g+=Tx(25,233,`Размеры по горизонтали — от начала стены (стрелка на плане). Нижняя цепочка — оси стоек${wl.ext?', шаг от наружного угла':''}.`,{a:'start',size:2.1});
@@ -1885,38 +1924,59 @@ function sheetMans(){
   return {code:'АР-2',title:'План мансарды',sub:`Стенки ${M.kneeH} мм, потолок ${M.mansH} мм, уклон ${M.deg}°`,scale:s,body:g};
 }
 function sheetRoofPlan(code){
-  const {A,B,ov,og,tn,d}=M,W0=A+2*og,H0=B+2*ov,mL=46,mR=24,mT=26,mB=44,aw=385-96,s=fit(W0,H0,aw-mL-mR,222-mT-mB);
-  const w=W0/s,h=H0/s,px0=25+mL+(aw-mL-mR-w)/2+og/s,py0=10+mT+(222-mT-mB-h)/2+ov/s;
-  const X=x=>px0+x/s,Y=y=>py0+(B-y)/s;let g=Tx(25+aw/2,16,`План кровли  М 1:${s}`,{size:3.5,cls:'b'});
-  const pa=planAxes(M),ax=pa.ax.filter(x=>x>=-og&&x<=A+og),ay=pa.ay.filter(y=>y>=-ov&&y<=B+ov);
-  ax.forEach((x,i)=>{g+=Ln(X(x),Y(B+ov)-5,X(x),Y(-ov)+35,'ax')+bubble(X(x),Y(-ov)+38.6,i+1)});
-  ay.forEach((y,i)=>{g+=Ln(X(A+og)+5,Y(y),X(-og)-35,Y(y),'ax')+bubble(X(-og)-38.6,Y(y),AX_LET[i]||'?')});
-  /* скаты: заливка, контур кровли, стены пунктиром */
+  const {A,B,ov,og,tn}=M,WR=M.wingRoofs||[];
+  const xmin=-og,ymin=-ov,xmax=Math.max(A+og,...WR.map(r=>r.W2?r.k.x1+og:r.k.x1+ov)),ymax=Math.max(B+ov,...WR.map(r=>r.W2?r.k.y1+ov:r.k.y1+og));
+  const W0=xmax-xmin,H0=ymax-ymin,mL=46,mR=24,mT=26,mB=44,aw=385-96,s=fit(W0,H0,aw-mL-mR,222-mT-mB);
+  const w=W0/s,h=H0/s,pxL=25+mL+(aw-mL-mR-w)/2,pyT=10+mT+(222-mT-mB-h)/2;
+  const X=x=>pxL+(x-xmin)/s,Y=y=>pyT+(ymax-y)/s;let g=Tx(25+aw/2,16,`План кровли  М 1:${s}`,{size:3.5,cls:'b'});
+  const pa=planAxes(M),ax=pa.ax,ay=pa.ay;
+  ax.forEach((x,i)=>{g+=Ln(X(x),Y(ymax)-5,X(x),Y(ymin)+35,'ax')+bubble(X(x),Y(ymin)+38.6,i+1)});
+  ay.forEach((y,i)=>{g+=Ln(X(xmax)+5,Y(y),X(xmin)-35,Y(y),'ax')+bubble(X(xmin)-38.6,Y(y),AX_LET[i]||'?')});
+  const poly=(pts,fill)=>`<polygon points="${pts.map(q=>f2(X(q[0]))+','+f2(Y(q[1]))).join(' ')}" fill="${fill}" stroke="#111" stroke-width=".5"/>`;
+  /* основная кровля */
   const sl=M.gable?[[-ov,B/2],[B/2,B+ov]]:[[-ov,B+ov]];
-  sl.forEach(([y0,y1],i)=>g+=`<rect x="${f2(X(-og))}" y="${f2(Y(y1))}" width="${f2(W0/s)}" height="${f2((y1-y0)/s)}" fill="${i?'#EEF2F5':'#E6ECF1'}" stroke="none"/>`);
-  g+=Rc(X(-og),Y(B+ov),W0/s,H0/s,'m')+Rc(X(0),Y(B),A/s,B/s,'hd');
+  sl.forEach(([y0,y1],i)=>g+=`<rect x="${f2(X(-og))}" y="${f2(Y(y1))}" width="${f2((A+2*og)/s)}" height="${f2((y1-y0)/s)}" fill="${i?'#EEF2F5':'#E6ECF1'}" stroke="none"/>`);
+  g+=Rc(X(-og),Y(B+ov),(A+2*og)/s,(B+2*ov)/s,'m');
+  /* кровли крыльев поверх основной */
+  WR.forEach(r=>{const k=r.k,h2=r.half;
+    if(r.W2){const xe=k.x1+og;g+=poly([[A,k.y0-ov],[xe,k.y0-ov],[xe,r.yc],[A,r.yc]],'#E6ECF1')+poly([[A,r.yc],[xe,r.yc],[xe,k.y1+ov],[A,k.y1+ov]],'#EEF2F5')+Ln(X(A),Y(r.yc),X(xe),Y(r.yc),'m')}
+    else{const ye=k.y1+og,ya=B-h2,xl=k.x0-ov,xr=k.x1+ov;
+      g+=poly([[xl,B+ov],[r.xc,ya],[r.xc,ye],[xl,ye]],'#E9EEF2')+poly([[xr,B+ov],[r.xc,ya],[r.xc,ye],[xr,ye]],'#F0F3F6');
+      g+=Ln(X(xl),Y(B+ov),X(r.xc),Y(ya),'m')+Ln(X(xr),Y(B+ov),X(r.xc),Y(ya),'m')+Ln(X(r.xc),Y(ya),X(r.xc),Y(ye),'m');
+      g+=Tx((X(xl)+X(r.xc))/2-1.5,(Y(B+ov)+Y(ya))/2,'ендова',{size:2,a:'end'})+Tx((X(xr)+X(r.xc))/2+1.5,(Y(B+ov)+Y(ya))/2,'ендова',{size:2,a:'start'})}});
+  /* стены пунктиром */
+  [[0,0,A,B],...(M.wings||[]).map(k=>[k.x0,k.y0,k.x1,k.y1])].forEach(q=>g+=Rc(X(q[0]),Y(q[3]),(q[2]-q[0])/s,(q[3]-q[1])/s,'hd'));
   if(M.gable){g+=Ln(X(-og),Y(B/2),X(A+og),Y(B/2),'m');g+=Tx(X(A/2),Y(B/2)-1.2,'конёк',{size:2.2})}
-
   /* стрелки уклона — по направлению стока воды */
-  const pct=R(tn*100),arrow=(x,yA,yB)=>{const ya=Y(yA),yb=Y(yB),dir=Math.sign(yb-ya)||1;return Ln(X(x),ya,X(x),yb,'m')+Pg([[X(x),yb],[X(x)-1.1,yb-dir*3],[X(x)+1.1,yb-dir*3]],'blk')+Tx(X(x)+1.6,(ya+yb)/2+.8,`${M.deg}° (${pct} %)`,{size:2.4,a:'start'})};
+  const pct=R(tn*100),lab=`${M.deg}° (${pct} %)`;
+  const arrowV=(x,yA,yB)=>{const ya=Y(yA),yb=Y(yB),dir=Math.sign(yb-ya)||1;return Ln(X(x),ya,X(x),yb,'m')+Pg([[X(x),yb],[X(x)-1.1,yb-dir*3],[X(x)+1.1,yb-dir*3]],'blk')+Tx(X(x)+1.6,(ya+yb)/2+.8,lab,{size:2.4,a:'start'})};
+  const arrowH=(y,xA,xB)=>{const xa=X(xA),xb=X(xB),dir=Math.sign(xb-xa)||1;return Ln(xa,Y(y),xb,Y(y),'m')+Pg([[xb,Y(y)],[xb-dir*3,Y(y)-1.1],[xb-dir*3,Y(y)+1.1]],'blk')+Tx((xa+xb)/2,Y(y)-1.2,lab,{size:2.2})};
+  const free=x=>!WR.some(r=>!r.W2&&Math.abs(x-r.xc)<r.half+ov+300);
   const xs=[A*.25,A*.75];
-  if(M.gable)xs.forEach(x=>{g+=arrow(x,B/2-ov*.4-B*.08,B/2-B*.36)+arrow(x,B/2+ov*.4+B*.08,B/2+B*.36)});
-  else xs.forEach(x=>g+=arrow(x,B*.8,B*.2));
+  if(M.gable)xs.forEach(x=>{g+=arrowV(x,B/2-ov*.4-B*.08,B/2-B*.36);if(free(x))g+=arrowV(x,B/2+ov*.4+B*.08,B/2+B*.36)});
+  else xs.forEach(x=>g+=arrowV(x,B*.8,B*.2));
+  WR.forEach(r=>{const k=r.k,h2=r.half;
+    if(r.W2){const xm=(A+k.x1)/2;g+=arrowV(xm,r.yc-h2*.15,r.yc-h2*.8)+arrowV(xm,r.yc+h2*.15,r.yc+h2*.8)}
+    else{const ym=(B+ov+k.y1+og)/2;g+=arrowH(ym,r.xc-h2*.15,r.xc-h2*.85)+arrowH(ym,r.xc+h2*.15,r.xc+h2*.85)}});
   /* отметки */
   const zE=M.slopes[0].zA,zR=M.zRidge;
-  g+=Tx(X(A*.5),Y(-ov)-1.6,`отм. карниза ${elvTxt(zE-M.z0)}`,{size:2.2});if(M.gable)g+=Tx(X(A*.5),Y(B+ov)+3.6,`отм. карниза ${elvTxt(zE-M.z0)}`,{size:2.2});
+  g+=Tx(X(A*.5),Y(-ov)-1.6,`отм. карниза ${elvTxt(zE-M.z0)}`,{size:2.2});if(M.gable&&free(A*.5))g+=Tx(X(A*.5),Y(B+ov)+3.6,`отм. карниза ${elvTxt(zE-M.z0)}`,{size:2.2});
   g+=M.gable?Tx(X(A*.5),Y(B/2)+3.4,`отм. конька ${elvTxt(zR-M.z0)}`,{size:2.2}):Tx(X(A*.5),Y(B+ov)-1.6,`верх ската, отм. ${elvTxt(zR-M.z0)}`,{size:2.2});
+  WR.forEach(r=>{const k=r.k;if(r.W2)g+=Tx(X((A+k.x1+og)/2),Y(r.yc)+3.4,`отм. конька ${elvTxt(r.ridgeZ-M.z0)}`,{size:2.2});
+    else g+=Tx(X(r.xc)+1.4,Y(k.y1+og)+4,`отм. конька ${elvTxt(r.ridgeZ-M.z0)}`,{size:2.2,a:'start'})});
   /* размеры */
-  g+=chainH([-og,0,A,A+og],X,Y(-ov)+9,Y(-ov))+chainH([-og,...ax,A+og],X,Y(-ov)+17,Y(-ov))+dimH(X(-og),X(A+og),Y(-ov)+25,Y(-ov),R(W0));
-  g+=chainV([-ov,0,...(M.gable?[B/2]:[]),B,B+ov],Y,X(-og)-9,X(-og))+chainV([-ov,...ay,B+ov],Y,X(-og)-17,X(-og))+dimV(Y(-ov),Y(B+ov),X(-og)-25,X(-og),R(H0));
+  const xb=[...new Set([xmin,0,A,A+og,xmax,...WR.flatMap(r=>r.W2?[]:[r.k.x0-ov,r.k.x1+ov])])],yb=[...new Set([ymin,0,...(M.gable?[B/2]:[]),B,B+ov,ymax,...WR.flatMap(r=>r.W2?[r.k.y0-ov,r.k.y1+ov]:[])])];
+  g+=chainH(xb,X,Y(ymin)+9,Y(ymin))+chainH([xmin,...ax,xmax],X,Y(ymin)+17,Y(ymin))+dimH(X(xmin),X(xmax),Y(ymin)+25,Y(ymin),R(W0));
+  g+=chainV(yb,Y,X(xmin)-9,X(xmin))+chainV([ymin,...ay,ymax],Y,X(xmin)-17,X(xmin))+dimV(Y(ymin),Y(ymax),X(xmin)-25,X(xmin),R(H0));
   /* ведомость */
-  const eaves=(M.gable?2:1)*W0/1000,ex=25+aw+3;
-  g+=tableBlock(ex,30,91,80,'Кровля',[{t:'Показатель',w:55,a:'start'},{t:'Значение',w:36}],[
-    ['Тип',M.gable?'двускатная':'односкатная'],['Уклон',`${M.deg}° (${pct} %)`],['Покрытие',M.mat.name],
+  const ri=M.roofInfo||{eaves:(M.gable?2:1)*(A+2*og),ridge:M.gable?A+2*og:0,valleys:0,valleyN:0},ex=25+aw+3;
+  const rows=[['Тип',M.gable?'двускатная':'односкатная'],['Уклон',`${M.deg}° (${pct} %)`],['Покрытие',M.mat.name],
     ['Площадь скатов',`${fmt(M.roofArea,1)} м²`],['Карнизный свес',`${M.ov} мм`],['Фронтонный свес',`${M.og} мм`],
-    ['Длина карнизов (желоба)',`${fmt(eaves,1)} м`],['Длина конька',M.gable?`${fmt(W0/1000,1)} м`:'—'],['Мин. уклон покрытия',`${M.mat.min}°`]]);
-  [`Стрелка — направление стока воды.`,`Водосточные трубы — ориентировочно`,`1 шт на 10 м желоба, не реже чем`,`по углам дома.`,M.deg<M.mat.min?`Уклон меньше допустимого для покрытия!`:''].filter(Boolean).forEach((t,i)=>g+=Tx(ex,30+5.2+9*4+10+i*4.2,t,{a:'start',size:2.2}));
-  return {code,title:'План кровли',sub:`${M.gable?'Двускатная':'Односкатная'}, ${M.deg}°, ${M.mat.name.toLowerCase()}, ${fmt(M.roofArea,1)} м²`,scale:s,body:g};
+    ['Длина карнизов (желоба)',`${fmt(ri.eaves/1000,1)} м`],['Длина коньков',ri.ridge?`${fmt(ri.ridge/1000,1)} м`:'—'],
+    ...(ri.valleyN?[['Ендовы',`${ri.valleyN} шт, ${fmt(ri.valleys/1000,1)} м`]]:[]),['Мин. уклон покрытия',`${M.mat.min}°`]];
+  g+=tableBlock(ex,30,91,80,'Кровля',[{t:'Показатель',w:55,a:'start'},{t:'Значение',w:36}],rows);
+  [`Стрелка — направление стока воды.`,`Водосточные трубы — ориентировочно`,`1 шт на 10 м желоба, не реже чем`,`по углам дома.`,...(ri.valleyN?['Под ендовой — сплошная обрешётка','и ендовная планка.']:[]),M.deg<M.mat.min?`Уклон меньше допустимого для покрытия!`:''].filter(Boolean).forEach((t,i)=>g+=Tx(ex,30+5.2+rows.length*4+10+i*4.2,t,{a:'start',size:2.2}));
+  return {code,title:'План кровли',sub:`${M.gable?'Двускатная':'Односкатная'}${WR.length?` + крылья: ${WR.length}`:''}, ${M.deg}°, ${M.mat.name.toLowerCase()}, ${fmt(M.roofArea,1)} м²`,scale:s,body:g};
 }
 function sheetRoof(){
   const {A,B,ov,og,tn,cs,hr,br}=M,zMin=-700,zMax=M.zRidge+250,yMin=-ov-300,yMax=B+ov+300;
