@@ -5,9 +5,7 @@ function facadeFaces(){
   /* кровельные плоскости в плане: многоугольник, высота низа z(x,y), какие кромки видимые (карниз/фронтон) */
   const RP=[];
   if(M.gable){RP.push({pl:[[-og,-ov],[A+og,-ov],[A+og,B/2],[-og,B/2]],z:(x,y)=>zA+(y+ov)*tn,sk:[2]},{pl:[[-og,B/2],[A+og,B/2],[A+og,B+ov],[-og,B+ov]],z:(x,y)=>zA+(B+ov-y)*tn,sk:[0]});
-    (M.wingRoofs||[]).forEach(r=>{const k=r.k;
-      if(r.W2){const xe=k.x1+og;RP.push({pl:[[A,k.y0-ov],[xe,k.y0-ov],[xe,r.yc],[A,r.yc]],z:(x,y)=>zA+(y-k.y0+ov)*tn,sk:[2,3]},{pl:[[A,r.yc],[xe,r.yc],[xe,k.y1+ov],[A,k.y1+ov]],z:(x,y)=>zA+(k.y1+ov-y)*tn,sk:[0,3]})}
-      else{const ye=k.y1+og,ya=B-r.half,xl=k.x0-ov,xr=k.x1+ov;RP.push({pl:[[xl,B+ov],[r.xc,ya],[r.xc,ye],[xl,ye]],z:(x,y)=>zA+(x-xl)*tn,sk:[0,1]},{pl:[[xr,B+ov],[xr,ye],[r.xc,ye],[r.xc,ya]],z:(x,y)=>zA+(xr-x)*tn,sk:[2,3]})}})}
+    (M.wingRoofs||[]).forEach(r=>r.polys.forEach(q=>RP.push({pl:q.pl,z:q.z,sk:q.sk})))}
   else RP.push({pl:[[-og,-ov],[A+og,-ov],[A+og,B+ov],[-og,B+ov]],z:(x,y)=>zA+(y+ov)*tn,sk:[]});
   const inPl=(pl,x,y)=>{let c=false;for(let i=0,j=pl.length-1;i<pl.length;j=i++){const [xi,yi]=pl[i],[xj,yj]=pl[j];
       if(Math.abs((xj-xi)*(y-yi)-(yj-yi)*(x-xi))<1e-3*Math.hypot(xj-xi,yj-yi)&&x>=Math.min(xi,xj)-1&&x<=Math.max(xi,xj)+1&&y>=Math.min(yi,yj)-1&&y<=Math.max(yi,yj)+1)return true;

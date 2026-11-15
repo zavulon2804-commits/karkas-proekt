@@ -1,6 +1,6 @@
 function sheetRoofPlan(code){
   const {A,B,ov,og,tn}=M,WR=M.wingRoofs||[];
-  const xmin=-og,ymin=-ov,xmax=Math.max(A+og,...WR.map(r=>r.W2?r.k.x1+og:r.k.x1+ov)),ymax=Math.max(B+ov,...WR.map(r=>r.W2?r.k.y1+ov:r.k.y1+og));
+  const WP=WR.flatMap(r=>r.polys.flatMap(q=>q.pl)),xmin=Math.min(-og,...WP.map(p=>p[0])),ymin=Math.min(-ov,...WP.map(p=>p[1])),xmax=Math.max(A+og,...WP.map(p=>p[0])),ymax=Math.max(B+ov,...WP.map(p=>p[1]));
   const W0=xmax-xmin,H0=ymax-ymin,mL=46,mR=24,mT=26,mB=44,aw=385-96,s=fit(W0,H0,aw-mL-mR,222-mT-mB);
   const w=W0/s,h=H0/s,pxL=25+mL+(aw-mL-mR-w)/2,pyT=10+mT+(222-mT-mB-h)/2;
   const X=x=>pxL+(x-xmin)/s,Y=y=>pyT+(ymax-y)/s;let g=Tx(25+aw/2,16,`План кровли  М 1:${s}`,{size:3.5,cls:'b'});
@@ -13,12 +13,8 @@ function sheetRoofPlan(code){
   sl.forEach(([y0,y1],i)=>g+=`<rect x="${f2(X(-og))}" y="${f2(Y(y1))}" width="${f2((A+2*og)/s)}" height="${f2((y1-y0)/s)}" fill="${i?'#EEF2F5':'#E6ECF1'}" stroke="none"/>`);
   g+=Rc(X(-og),Y(B+ov),(A+2*og)/s,(B+2*ov)/s,'m');
   /* кровли крыльев поверх основной */
-  WR.forEach(r=>{const k=r.k,h2=r.half;
-    if(r.W2){const xe=k.x1+og;g+=poly([[A,k.y0-ov],[xe,k.y0-ov],[xe,r.yc],[A,r.yc]],'#E6ECF1')+poly([[A,r.yc],[xe,r.yc],[xe,k.y1+ov],[A,k.y1+ov]],'#EEF2F5')+Ln(X(A),Y(r.yc),X(xe),Y(r.yc),'m')}
-    else{const ye=k.y1+og,ya=B-h2,xl=k.x0-ov,xr=k.x1+ov;
-      g+=poly([[xl,B+ov],[r.xc,ya],[r.xc,ye],[xl,ye]],'#E9EEF2')+poly([[xr,B+ov],[r.xc,ya],[r.xc,ye],[xr,ye]],'#F0F3F6');
-      g+=Ln(X(xl),Y(B+ov),X(r.xc),Y(ya),'m')+Ln(X(xr),Y(B+ov),X(r.xc),Y(ya),'m')+Ln(X(r.xc),Y(ya),X(r.xc),Y(ye),'m');
-      g+=Tx((X(xl)+X(r.xc))/2-1.5,(Y(B+ov)+Y(ya))/2,'ендова',{size:2,a:'end'})+Tx((X(xr)+X(r.xc))/2+1.5,(Y(B+ov)+Y(ya))/2,'ендова',{size:2,a:'start'})}});
+  WR.forEach(r=>{g+=poly(r.polys[0].pl,'#E9EEF2')+poly(r.polys[1].pl,'#F0F3F6')+Ln(X(r.ridge[0][0]),Y(r.ridge[0][1]),X(r.ridge[1][0]),Y(r.ridge[1][1]),'m');
+    r.valleys.forEach(([a,b],j)=>{g+=Ln(X(a[0]),Y(a[1]),X(b[0]),Y(b[1]),'m');const mx=(X(a[0])+X(b[0]))/2,my=(Y(a[1])+Y(b[1]))/2;g+=Tx(mx+(j?1.5:-1.5),my,'ендова',{size:2,a:j?'start':'end'})})});
   /* стены пунктиром */
   [[0,0,A,B],...(M.wings||[]).map(k=>[k.x0,k.y0,k.x1,k.y1])].forEach(q=>g+=Rc(X(q[0]),Y(q[3]),(q[2]-q[0])/s,(q[3]-q[1])/s,'hd'));
   if(M.gable){g+=Ln(X(-og),Y(B/2),X(A+og),Y(B/2),'m');g+=Tx(X(A/2),Y(B/2)-1.2,'конёк',{size:2.2})}
@@ -26,21 +22,18 @@ function sheetRoofPlan(code){
   const pct=R(tn*100),lab=`${M.deg}° (${pct} %)`;
   const arrowV=(x,yA,yB)=>{const ya=Y(yA),yb=Y(yB),dir=Math.sign(yb-ya)||1;return Ln(X(x),ya,X(x),yb,'m')+Pg([[X(x),yb],[X(x)-1.1,yb-dir*3],[X(x)+1.1,yb-dir*3]],'blk')+Tx(X(x)+1.6,(ya+yb)/2+.8,lab,{size:2.4,a:'start'})};
   const arrowH=(y,xA,xB)=>{const xa=X(xA),xb=X(xB),dir=Math.sign(xb-xa)||1;return Ln(xa,Y(y),xb,Y(y),'m')+Pg([[xb,Y(y)],[xb-dir*3,Y(y)-1.1],[xb-dir*3,Y(y)+1.1]],'blk')+Tx((xa+xb)/2,Y(y)-1.2,lab,{size:2.2})};
-  const free=x=>!WR.some(r=>!r.W2&&Math.abs(x-r.xc)<r.half+ov+300);
+  const free=(x,sd='W3')=>!WR.some(r=>!r.end&&r.k.side===sd&&Math.abs(x-r.xc)<r.half+ov+300);
   const xs=[A*.25,A*.75];
-  if(M.gable)xs.forEach(x=>{g+=arrowV(x,B/2-ov*.4-B*.08,B/2-B*.36);if(free(x))g+=arrowV(x,B/2+ov*.4+B*.08,B/2+B*.36)});
+  if(M.gable)xs.forEach(x=>{if(free(x,'W1'))g+=arrowV(x,B/2-ov*.4-B*.08,B/2-B*.36);if(free(x))g+=arrowV(x,B/2+ov*.4+B*.08,B/2+B*.36)});
   else xs.forEach(x=>g+=arrowV(x,B*.8,B*.2));
-  WR.forEach(r=>{const k=r.k,h2=r.half;
-    if(r.W2){const xm=(A+k.x1)/2;g+=arrowV(xm,r.yc-h2*.15,r.yc-h2*.8)+arrowV(xm,r.yc+h2*.15,r.yc+h2*.8)}
-    else{const ym=(B+ov+k.y1+og)/2;g+=arrowH(ym,r.xc-h2*.15,r.xc-h2*.85)+arrowH(ym,r.xc+h2*.15,r.xc+h2*.85)}});
+  WR.forEach(r=>{const k=r.k,h2=r.half,ac=k.off+k.Wd/2,rm=r.end?k.D/2:(ov+k.D+og)/2;[-1,1].forEach(dir=>{const p=k.G(ac+dir*h2*.15,rm),q=k.G(ac+dir*h2*.8,rm);g+=k.T[1]?arrowV(p[0],p[1],q[1]):arrowH(p[1],p[0],q[0])})});
   /* отметки */
   const zE=M.slopes[0].zA,zR=M.zRidge;
-  g+=Tx(X(A*.5),Y(-ov)-1.6,`отм. карниза ${elvTxt(zE-M.z0)}`,{size:2.2});if(M.gable&&free(A*.5))g+=Tx(X(A*.5),Y(B+ov)+3.6,`отм. карниза ${elvTxt(zE-M.z0)}`,{size:2.2});
+  if(free(A*.5,'W1'))g+=Tx(X(A*.5),Y(-ov)-1.6,`отм. карниза ${elvTxt(zE-M.z0)}`,{size:2.2});if(M.gable&&free(A*.5))g+=Tx(X(A*.5),Y(B+ov)+3.6,`отм. карниза ${elvTxt(zE-M.z0)}`,{size:2.2});
   g+=M.gable?Tx(X(A*.5),Y(B/2)+3.4,`отм. конька ${elvTxt(zR-M.z0)}`,{size:2.2}):Tx(X(A*.5),Y(B+ov)-1.6,`верх ската, отм. ${elvTxt(zR-M.z0)}`,{size:2.2});
-  WR.forEach(r=>{const k=r.k;if(r.W2)g+=Tx(X((A+k.x1+og)/2),Y(r.yc)+3.4,`отм. конька ${elvTxt(r.ridgeZ-M.z0)}`,{size:2.2});
-    else g+=Tx(X(r.xc)+1.4,Y(k.y1+og)+4,`отм. конька ${elvTxt(r.ridgeZ-M.z0)}`,{size:2.2,a:'start'})});
+  WR.forEach(r=>{const k=r.k,p=k.G(k.off+k.Wd/2,r.end?k.D/2:k.D-500);g+=Tx(X(p[0])+(r.end?0:1.4),Y(p[1])+(r.end?3.4:0),`отм. конька ${elvTxt(r.ridgeZ-M.z0)}`,{size:2.2,a:r.end?'middle':'start'})});
   /* размеры */
-  const xb=[...new Set([xmin,0,A,A+og,xmax,...WR.flatMap(r=>r.W2?[]:[r.k.x0-ov,r.k.x1+ov])])],yb=[...new Set([ymin,0,...(M.gable?[B/2]:[]),B,B+ov,ymax,...WR.flatMap(r=>r.W2?[r.k.y0-ov,r.k.y1+ov]:[])])];
+  const xb=[...new Set([xmin,0,A,A+og,xmax,...WR.flatMap(r=>r.end?[]:[r.k.x0-ov,r.k.x1+ov])])],yb=[...new Set([ymin,0,...(M.gable?[B/2]:[]),B,B+ov,ymax,...WR.flatMap(r=>r.end?[r.k.y0-ov,r.k.y1+ov]:[])])];
   g+=chainH(xb,X,Y(ymin)+9,Y(ymin))+chainH([xmin,...ax,xmax],X,Y(ymin)+17,Y(ymin))+dimH(X(xmin),X(xmax),Y(ymin)+25,Y(ymin),R(W0));
   g+=chainV(yb,Y,X(xmin)-9,X(xmin))+chainV([ymin,...ay,ymax],Y,X(xmin)-17,X(xmin))+dimV(Y(ymin),Y(ymax),X(xmin)-25,X(xmin),R(H0));
   /* ведомость */

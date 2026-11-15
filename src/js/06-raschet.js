@@ -31,7 +31,7 @@ function calc(M){
   const pc=pileCap(P,M),t=M.pileT,selfP=t.kind==='screw'||t.kind==='manual'?.35:(t.kind==='driven'?(t.a/1000)**2:Math.PI*(t.d/1000)**2/4)*M.pileLen/1000*25;
   const react=new Map(M.piles.map(p=>[p.key,selfP*1.1])),reactG=new Map(M.piles.map(p=>[p.key,selfP]));
   M.lines.forEach(L=>{for(let i=0;i<L.pts.length-1;i++){const seg=(L.pts[i+1]-L.pts[i])/1000/2;
-    [L.pts[i],L.pts[i+1]].forEach(p=>{const k=L.axis==='x'?R(p)+'_'+R(L.c):R(L.c)+'_'+R(p);react.set(k,(react.get(k)||0)+L.qd*seg);reactG.set(k,(reactG.get(k)||0)+L.qg*seg)})}});
+    [L.pts[i],L.pts[i+1]].forEach(p=>{let k=L.axis==='x'?R(p)+'_'+R(L.c):R(L.c)+'_'+R(p);k=M.pileAlias?.[k]||k;react.set(k,(react.get(k)||0)+L.qd*seg);reactG.set(k,(reactG.get(k)||0)+L.qg*seg)})}});
   M.piles.forEach(p=>{p.N=react.get(p.key)||0;p.Ng=reactG.get(p.key)||0});
   const Rmax=Math.max(...M.piles.map(p=>p.N)), Rsum=M.piles.reduce((s,p)=>s+p.N,0);
   const soil=SOILS[P.soil]||SOILS.loam;
@@ -135,7 +135,7 @@ function calc(M){
 function hCalc(M,l,pc,g){
   const P=M.P,w0k=l.w0*l.k,gf=1.4,above=M.zRidge-M.zt,out=[];
   const cW=1.3; // наветренная + заветренная сторона (СП 20.13330, прил. В)
-  const AX=M.AX||M.A,BY=M.BY||M.B,Fy=w0k*gf*(cW*AX*M.H/2+.8*(M.A+2*M.og)*above)/1e6, Fx=w0k*gf*cW*(BY*M.H/2+M.B*above/2)/1e6;
+  const AX=(M.AX||M.A)-(M.X0||0),BY=(M.BY||M.B)-(M.Y0||0),Fy=w0k*gf*(cW*AX*M.H/2+.8*(M.A+2*M.og)*above)/1e6, Fx=w0k*gf*cW*(BY*M.H/2+M.B*above/2)/1e6;
   const hy=((M.A*M.H/2)*(M.z0+.75*M.H)+(M.A*above)*(M.zt+above/3))/((M.A*M.H/2)+(M.A*above))-M.H0;
   const hx=((M.B*M.H/2)*(M.z0+.75*M.H)+(M.B*above/2)*(M.zt+above/3))/((M.B*M.H/2)+(M.B*above/2))-M.H0;
   const walls=M.rackWalls.map(w=>({w,...wallRack(M,w)}));

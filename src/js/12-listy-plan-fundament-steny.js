@@ -1,17 +1,17 @@
 function sheetPiles(){
-  const A=M.AX||M.A,B=M.BY||M.B,mL=34,mB=34,mT=14,mR=10,s=fit(A,B,385-mL-mR,222-mT-mB);
+  const x0=M.X0||0,y0=M.Y0||0,x1=M.AX||M.A,y1=M.BY||M.B,A=x1-x0,B=y1-y0,mL=34,mB=34,mT=14,mR=10,s=fit(A,B,385-mL-mR,222-mT-mB);
   const w=A/s,h=B/s,px0=25+mL+(385-mL-mR-w)/2,py0=10+mT+(222-mT-mB-h)/2;
-  const X=x=>px0+x/s,Y=y=>py0+(B-y)/s;let g=Tx(25+385/2,16,`План свайного поля  М 1:${s}`,{size:3.5,cls:'b'});
+  const X=x=>px0+(x-x0)/s,Y=y=>py0+(y1-y)/s;let g=Tx(25+385/2,16,`План свайного поля  М 1:${s}`,{size:3.5,cls:'b'});
   [[0,0,M.A,M.B],...(M.wings||[]).map(k=>[k.x0,k.y0,k.x1,k.y1])].forEach(r=>g+=Rc(X(r[0]),Y(r[3]),(r[2]-r[0])/s,(r[3]-r[1])/s,'hd'));
   M.mem.filter(m=>m.grp==='grill').forEach(m=>{const hw=m.sz/2/s;if(Math.abs(m.p1[0]-m.p0[0])>1)g+=Rc(X(m.p0[0]),Y(m.p0[1])-hw,(m.p1[0]-m.p0[0])/s,2*hw,'ctx');else g+=Rc(X(m.p0[0])-hw,Y(m.p1[1]),2*hw,(m.p1[1]-m.p0[1])/s,'ctx')});
-  const xsU=[...new Set(M.piles.map(p=>R(p.x)))].sort((a,c)=>a-c),ysU=[...new Set(M.piles.map(p=>R(p.y)))].sort((a,c)=>a-c);
-  xsU.forEach((x,i)=>{g+=Ln(X(x),Y(B)-4,X(x),Y(0)+25,'ax');g+=bubble(X(x),Y(0)+28.6,i+1)});
-  ysU.forEach((y,i)=>{g+=Ln(X(0)-25,Y(y),X(A)+4,Y(y),'ax');g+=bubble(X(0)-28.6,Y(y),AX_LET[i]||'?')});
+  const uq=a=>[...new Set(a.map(v=>R(v)))].sort((p,c)=>p-c).filter((v,i,arr)=>!i||v-arr[i-1]>250),xsU=uq(M.piles.map(p=>p.x)),ysU=uq(M.piles.map(p=>p.y));
+  xsU.forEach((x,i)=>{g+=Ln(X(x),Y(y1)-4,X(x),Y(y0)+25,'ax');g+=bubble(X(x),Y(y0)+28.6,i+1)});
+  ysU.forEach((y,i)=>{g+=Ln(X(x0)-25,Y(y),X(x1)+4,Y(y),'ax');g+=bubble(X(x0)-28.6,Y(y),AX_LET[i]||'?')});
   const r=Math.max(1.3,M.pileD/2/s);
   const sq=M.pileT.kind==='driven';
   M.piles.forEach(p=>{g+=(sq?Rc(X(p.x)-r,Y(p.y)-r,2*r,2*r,'pile'):Ci(X(p.x),Y(p.y),r,'pile'))+Ln(X(p.x)-r,Y(p.y),X(p.x)+r,Y(p.y))+Ln(X(p.x),Y(p.y)-r,X(p.x),Y(p.y)+r);g+=Tx(X(p.x)+r+.5,Y(p.y)-r-.4,p.no,{size:2,a:'start'})});
-  g+=chainH([0,...xsU,A],X,Y(0)+8,Y(0))+dimH(X(0),X(A),Y(0)+16,Y(0),A);
-  g+=chainV([0,...ysU,B],Y,X(0)-8,X(0))+dimV(Y(0),Y(B),X(0)-16,X(0),B);
+  g+=chainH([x0,...xsU,x1],X,Y(y0)+8,Y(y0))+dimH(X(x0),X(x1),Y(y0)+16,Y(y0),A);
+  g+=chainV([y0,...ysU,y1],Y,X(x0)-8,X(x0))+dimV(Y(y0),Y(y1),X(x0)-16,X(x0),B);
   const top=elvTxt(M.H0-M.z0);
   g+=tableBlock(25,240,200,22,'Ведомость свай',[{t:'Поз.',w:10},{t:'Наименование',w:70,a:'start'},{t:'Длина, мм',w:20},{t:'Кол-во',w:16},{t:'Отм. верха',w:22}],[[1,M.pileT.name,M.pileLen,M.piles.length,top]]);
   const tk=M.pileT.kind,low=elvTxt(M.H0-M.pileLen-M.z0);
@@ -24,29 +24,29 @@ function sheetPiles(){
   return {code:'Ф-1',title:'План свайного поля',sub:`Свай ${M.piles.length} шт, ${M.pileT.short}, L=${M.pileLen}`,scale:s,body:g};
 }
 function sheetGrill(){
-  const A=M.AX||M.A,B=M.BY||M.B,mL=26,mB=26,mT=14,mR=10,s=fit(A,B,385-mL-mR,222-mT-mB);
+  const x0=M.X0||0,y0=M.Y0||0,x1=M.AX||M.A,y1=M.BY||M.B,A=x1-x0,B=y1-y0,mL=26,mB=26,mT=14,mR=10,s=fit(A,B,385-mL-mR,222-mT-mB);
   const w=A/s,h=B/s,px0=25+mL+(385-mL-mR-w)/2,py0=10+mT+(222-mT-mB-h)/2;
-  const X=x=>px0+x/s,Y=y=>py0+(B-y)/s;let g=Tx(25+385/2,16,`План ростверка и лаг пола  М 1:${s}`,{size:3.5,cls:'b'});
+  const X=x=>px0+(x-x0)/s,Y=y=>py0+(y1-y)/s;let g=Tx(25+385/2,16,`План ростверка и лаг пола  М 1:${s}`,{size:3.5,cls:'b'});
   const planRect=(m,c)=>{const hw=m.sz/2/s;if(Math.abs(m.p1[0]-m.p0[0])>1)return Rc(X(Math.min(m.p0[0],m.p1[0])),Y(m.p0[1])-hw,Math.abs(m.p1[0]-m.p0[0])/s,2*hw,c);return Rc(X(m.p0[0])-hw,Y(Math.max(m.p0[1],m.p1[1])),2*hw,Math.abs(m.p1[1]-m.p0[1])/s,c)};
   M.mem.filter(m=>m.grp==='grill').forEach(m=>g+=planRect(m,'w2'));
   M.mem.filter(m=>m.grp==='floor').forEach(m=>g+=planRect(m,'w'));
   const r=Math.max(1.2,M.pileD/2/s);M.piles.forEach(p=>g+=Ci(X(p.x),Y(p.y),r,'hd'));
-  g+=chainH([0,...M.xsJ,A],X,Y(0)+8,Y(0))+dimH(X(0),X(A),Y(0)+16,Y(0),A);
-  g+=chainV([0,...M.lines.filter(l=>l.axis==='x').map(l=>l.c),B],Y,X(0)-8,X(0))+dimV(Y(0),Y(B),X(0)-16,X(0),B);
+  g+=chainH([x0,...M.xsJ,x1],X,Y(y0)+8,Y(y0))+dimH(X(x0),X(x1),Y(y0)+16,Y(y0),A);
+  g+=chainV([y0,...M.lines.filter(l=>l.axis==='x').map(l=>l.c),y1],Y,X(x0)-8,X(x0))+dimV(Y(y0),Y(y1),X(x0)-16,X(x0),B);
   const jm=M.mem.find(m=>m.role==='Л'),bm=M.mem.find(m=>m.role==='Б'),xj=M.xsJ[Math.min(2,M.xsJ.length-1)];
-  if(jm){const yy=Y(B*.72);g+=Ln(X(xj),yy,X(xj)+14,yy-8)+Ln(X(xj)+14,yy-8,X(xj)+46,yy-8)+Tx(X(xj)+15,yy-9,`${jm.mark} лага ${M.bj}×${M.hj}, шаг ${M.sj}`,{a:'start',size:2.3})}
-  if(bm){const xx=X(A*.55),yy=Y(M.bb/2);g+=Ln(xx,yy,xx+10,yy-12)+Ln(xx+10,yy-12,xx+52,yy-12)+Tx(xx+11,yy-13,`${bm.mark} брус ростверка ${M.bb}×${M.hb}${M.ply>1?` (${M.ply} доски)`:''}`,{a:'start',size:2.3})}
+  if(jm){const yy=Y(M.B*.72);g+=Ln(X(xj),yy,X(xj)+14,yy-8)+Ln(X(xj)+14,yy-8,X(xj)+46,yy-8)+Tx(X(xj)+15,yy-9,`${jm.mark} лага ${M.bj}×${M.hj}, шаг ${M.sj}`,{a:'start',size:2.3})}
+  if(bm){const xx=X(M.A*.55),yy=Y(M.bb/2);g+=Ln(xx,yy,xx+10,yy-12)+Ln(xx+10,yy-12,xx+52,yy-12)+Tx(xx+11,yy-13,`${bm.mark} брус ростверка ${M.bb}×${M.hb}${M.ply>1?` (${M.ply} доски)`:''}`,{a:'start',size:2.3})}
   g+=tableBlock(25,240,200,48,'Спецификация элементов листа',MARK_COLS,markRows(x=>x.grp==='grill'||x.grp==='floor'));
   return {code:'Ф-2',title:'План ростверка и лаг',sub:`Промежуточных балок: ${M.nMid}, пролёт лаг ${R(M.Lj)} мм`,scale:s,body:g};
 }
 function sheetPlan(){
-  const {A,B,d}=M,AX=M.AX||A,BY=M.BY||B,EW=96,aw=385-EW,mL=46,mR=30,mT=26,mB=44,s=fit(AX,BY,aw-mL-mR,222-mT-mB);
-  const w=AX/s,h=BY/s,px0=25+mL+(aw-mL-mR-w)/2,py0=10+mT+(222-mT-mB-h)/2;
-  const X=x=>px0+x/s,Y=y=>py0+(BY-y)/s;let g=Tx(25+aw/2,16,`План 1 этажа  М 1:${s}`,{size:3.5,cls:'b'});
+  const {A,B,d}=M,AX=M.AX||A,BY=M.BY||B,X0=M.X0||0,Y0=M.Y0||0,EW=96,aw=385-EW,mL=46,mR=30,mT=26,mB=44,s=fit(AX-X0,BY-Y0,aw-mL-mR,222-mT-mB);
+  const w=(AX-X0)/s,h=(BY-Y0)/s,px0=25+mL+(aw-mL-mR-w)/2,py0=10+mT+(222-mT-mB-h)/2;
+  const X=x=>px0+(x-X0)/s,Y=y=>py0+(BY-y)/s;let g=Tx(25+aw/2,16,`План 1 этажа  М 1:${s}`,{size:3.5,cls:'b'});
   const wgS=side=>(M.wings||[]).filter(k=>k.side===side);
   const {ax,ay}=planAxes(M);
-  ax.forEach((x,i)=>{g+=Ln(X(x),Y(BY)-5,X(x),Y(0)+35,'ax')+bubble(X(x),Y(0)+38.6,i+1)});
-  ay.forEach((y,i)=>{g+=Ln(X(AX)+5,Y(y),X(0)-35,Y(y),'ax')+bubble(X(0)-38.6,Y(y),AX_LET[i]||'?')});
+  ax.forEach((x,i)=>{g+=Ln(X(x),Y(BY)-5,X(x),Y(Y0)+35,'ax')+bubble(X(x),Y(Y0)+38.6,i+1)});
+  ay.forEach((y,i)=>{g+=Ln(X(AX)+5,Y(y),X(X0)-35,Y(y),'ax')+bubble(X(X0)-38.6,Y(y),AX_LET[i]||'?')});
   /* помещения: лёгкая заливка */
   (M.rooms||[]).forEach(r=>r.cells.forEach(c=>g+=`<rect x="${f2(X(c[0]))}" y="${f2(Y(c[3]))}" width="${f2((c[2]-c[0])/s)}" height="${f2((c[3]-c[1])/s)}" fill="${r.kind==='living'?'#F3F7F1':r.kind==='tech'?'#F6F1EA':'#F7F7F7'}" stroke="none"/>`));
   /* мебель и оборудование — тонкими линиями */
@@ -66,12 +66,12 @@ function sheetPlan(){
     if(wl.ext){g+=Tx(sx+dx+wl.ux*5.5+(wl.uy?(wl.id==='W4'?2.6:-2.6):0),sy+dy-wl.uy*5.5+(wl.ux?(wl.id==='W1'?-1.6:3.4):0),'ст.'+wl.id.slice(1),{size:2,rot:wl.uy?-90:0})}
     else g+=Tx(X(mx)+(wl.uy?3.2:wl.L/s*.2),Y(my)-(wl.ux?wl.d/2/s+1.2:-wl.L/s*.2),wl.id+(wl.bearing?' несущ.':''),{size:2.3,a:'start'})});
   const opsW=id=>{const wl=M.walls.find(x=>x.id===id);return wl.ops.filter(o=>o.ok).flatMap(o=>[o.x,o.x+o.w].map(v=>(wl.ux?wl.x0:wl.y0)+v))};
-  g+=chainH([0,M.d,...opsW('W1'),A-M.d,A],X,Y(0)+9,Y(0))+chainH([0,...ax,AX],X,Y(0)+17,Y(0))+dimH(X(0),X(AX),Y(0)+25,Y(0),AX);
-  if(!wgS('W3').length)g+=chainH([0,M.d,...opsW('W3'),A-M.d,A],X,Y(B)-9,Y(B))+dimH(X(0),X(AX),Y(BY)-17,Y(BY),AX);
-  else g+=chainH([0,...wgS('W3').flatMap(k=>[k.x0,k.x1]),AX],X,Y(BY)-9,Y(BY))+dimH(X(0),X(AX),Y(BY)-17,Y(BY),AX);
-  g+=chainV([0,M.d,...opsW('W4'),B-M.d,B],Y,X(0)-9,X(0))+chainV([0,...ay,BY],Y,X(0)-17,X(0))+dimV(Y(0),Y(BY),X(0)-25,X(0),BY);
-  if(!wgS('W2').length)g+=chainV([0,M.d,...opsW('W2'),B-M.d,B],Y,X(AX)+11,X(AX))+dimV(Y(0),Y(BY),X(AX)+19,X(AX),BY);
-  else g+=chainV([0,...wgS('W2').flatMap(k=>[k.y0,k.y1]),BY],Y,X(AX)+11,X(AX))+dimV(Y(0),Y(BY),X(AX)+19,X(AX),BY);
+  const sideH=(sd,y,dir,yy)=>{const ws=wgS(sd);return ws.length?chainH([X0,...ws.flatMap(k=>[k.x0,k.x1]),0,A,AX],X,Y(yy)+dir*9,Y(yy)):chainH([0,M.d,...opsW(sd),A-M.d,A],X,Y(y)+dir*9,Y(y))};
+  const sideV=(sd,x,dir,xx)=>{const ws=wgS(sd);return ws.length?chainV([Y0,...ws.flatMap(k=>[k.y0,k.y1]),0,B,BY],Y,X(xx)+dir*11,X(xx)):chainV([0,M.d,...opsW(sd),B-M.d,B],Y,X(x)+dir*11,X(x))};
+  g+=sideH('W1',0,1,Y0)+chainH([X0,...ax,AX],X,Y(Y0)+17,Y(Y0))+dimH(X(X0),X(AX),Y(Y0)+25,Y(Y0),AX-X0);
+  g+=sideH('W3',B,-1,BY)+dimH(X(X0),X(AX),Y(BY)-17,Y(BY),AX-X0);
+  g+=sideV('W4',0,-1,X0)+chainV([Y0,...ay,BY],Y,X(X0)-17,X(X0))+dimV(Y(Y0),Y(BY),X(X0)-25,X(X0),BY-Y0);
+  g+=sideV('W2',A,1,AX)+dimV(Y(Y0),Y(BY),X(AX)+19,X(AX),BY-Y0);
   /* марки помещений: номер, название, площадь */
   (M.rooms||[]).forEach(r=>{const cx=X(r.x),cy=Y(r.y),wmm=(r.x1-r.x0)/s,sz=wmm<22?1.8:2.2,nm=r.name.length*sz*.5>wmm-2?r.name.slice(0,Math.max(3,Math.floor((wmm-2)/(sz*.5))))+'…':r.name,ar=fmt(r.area,1);
     g+=Ci(cx,cy-3.4,2.5,'t')+Tx(cx,cy-2.5,r.no,{size:2.4,cls:'b'})+Tx(cx,cy+1.2,nm,{size:sz})+Tx(cx,cy+4.6,ar,{size:sz,cls:'b'})+Ln(cx-ar.length*sz*.28,cy+5.3,cx+ar.length*sz*.28,cy+5.3)});

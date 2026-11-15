@@ -75,10 +75,10 @@ function build3D(){
     const cap=new THREE.Mesh(boxGeo(t.kind==='driven'?300:250,t.kind==='driven'?300:250,8),capm);cap.position.set(p.x,p.y,M.H0+4);R3.groups.piles.add(cap);
     if(t.kind==='screw'||t.kind==='manual'){const bl=new THREE.Mesh(new THREE.CylinderGeometry(M.pileD*1.5,M.pileD*1.5,8,20),pm);bl.rotation.x=Math.PI/2;bl.position.set(p.x,p.y,-below+250);R3.groups.piles.add(bl)}
     if(t.base){const sp=new THREE.Mesh(new THREE.SphereGeometry(t.base/2,18,12),conc);sp.position.set(p.x,p.y,-below+t.base/2);R3.groups.piles.add(sp)}});
-  const gpad=3000,AXg=M.AX||M.A,BYg=M.BY||M.B,gw=AXg+2*gpad,gh=BYg+2*gpad;
+  const gpad=3000,X0g=M.X0||0,Y0g=M.Y0||0,AXg=M.AX||M.A,BYg=M.BY||M.B,gw=AXg-X0g+2*gpad,gh=BYg-Y0g+2*gpad;
   const ground=new THREE.Mesh(new THREE.PlaneGeometry(gw,gh),new THREE.MeshLambertMaterial({color:0x7d9a6a,transparent:true,opacity:.35,side:THREE.DoubleSide,depthWrite:false}));
-  ground.position.set(AXg/2,BYg/2,0);ground.renderOrder=-1;root.add(ground);
-  const gridH=new THREE.GridHelper(Math.max(gw,gh),Math.round(Math.max(gw,gh)/1000),0x5d7350,0x8aa07b);gridH.rotation.x=Math.PI/2;gridH.position.set(AXg/2,BYg/2,1);gridH.material.transparent=true;gridH.material.opacity=.35;root.add(gridH);
+  ground.position.set((AXg+X0g)/2,(BYg+Y0g)/2,0);ground.renderOrder=-1;root.add(ground);
+  const gridH=new THREE.GridHelper(Math.max(gw,gh),Math.round(Math.max(gw,gh)/1000),0x5d7350,0x8aa07b);gridH.rotation.x=Math.PI/2;gridH.position.set((AXg+X0g)/2,(BYg+Y0g)/2,1);gridH.material.transparent=true;gridH.material.opacity=.35;root.add(gridH);
   const bg=getComputedStyle(document.documentElement).getPropertyValue('--scene').trim()||'#dce3de';R3.renderer.setClearColor(new THREE.Color(bg));
   buildHouse3D();
   applyLayers(false);
@@ -86,7 +86,7 @@ function build3D(){
   draw3();
 }
 function applyLayers(redraw=true){Object.entries(R3.groups).forEach(([g,G])=>G.visible=V3==='house'?(/^ar/.test(g)&&(arLayers[g]??true))||g==='piles':!/^ar/.test(g)&&!!layers[g]);if(redraw)draw3()}
-function fitCam(){const c=R3.cam,AX=M.AX||M.A,BY=M.BY||M.B;c.target.set(AX/2000,M.zRidge/2000,-BY/2000);c.r=Math.max(AX,BY,M.zRidge)/1000*2.1;c.theta=-2.25;c.phi=1.08}
+function fitCam(){const c=R3.cam,X0=M.X0||0,Y0=M.Y0||0,AX=M.AX||M.A,BY=M.BY||M.B;c.target.set((AX+X0)/2000,M.zRidge/2000,-(BY+Y0)/2000);c.r=Math.max(AX-X0,BY-Y0,M.zRidge)/1000*2.1;c.theta=-2.25;c.phi=1.08}
 function resize3(){if(!R3)return;const cv=R3.renderer.domElement,w=cv.clientWidth,h=cv.clientHeight;if(!w||!h)return;R3.renderer.setSize(w,h,false);R3.camera.aspect=w/h;R3.camera.updateProjectionMatrix();draw3()}
 function draw3(){if(!R3)return;const {cam,camera}=R3,t=cam.target;camera.position.set(t.x+cam.r*Math.sin(cam.phi)*Math.cos(cam.theta),t.y+cam.r*Math.cos(cam.phi),t.z+cam.r*Math.sin(cam.phi)*Math.sin(cam.theta));camera.lookAt(t);R3.renderer.render(R3.scene,camera)}
 function pick3(e){

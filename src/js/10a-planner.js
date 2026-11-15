@@ -1,12 +1,12 @@
 /* ---------- АР: планировщик — план рисуется мышью (стены, перегородки, окна, двери, крылья, помещения) ----------
    Всё редактирует те же исходные данные P; конструкции и расчёт пересобираются из них (АР → КР). */
 const PL={tool:'sel',sel:null,snap:50,view:null,user:false,drag:null,raf:0};
-const PL_TOOLS=[['sel','Выбор','↖'],['iw','Перегородка','┃'],['window','Окно','▭'],['door','Дверь','◜'],['wingR','Крыло справа','⊐'],['wingB','Крыло сзади','⊔'],['furn','Мебель и оборудование','▦'],['ruler','Линейка','↔']];
+const PL_TOOLS=[['sel','Выбор','↖'],['iw','Перегородка','┃'],['window','Окно','▭'],['door','Дверь','◜'],['wing','Крыло','⊞'],['furn','Мебель и оборудование','▦'],['ruler','Линейка','↔']];
 const PL_HELP={sel:'Нажмите на стену, перегородку, окно, дверь или помещение — справа появятся размеры. Тяните мышью, чтобы передвинуть. Пустое место — двигать план, колесо — масштаб. Delete — удалить выбранное.',
   iw:'Нажмите и протяните мышью — получится перегородка. Концы у наружных стен притягиваются к ним.',
   window:'Нажмите на стену — там появится окно 1200×1400. Потом его можно тянуть вдоль стены.',door:'Нажмите на стену или перегородку — там появится дверь.',
   furn:'Выберите предмет в каталоге справа, затем нажмите на план — он встанет туда. Потом его можно тянуть, поворачивать (клавиша R) и менять размеры.',ruler:'Протяните мышью — покажется расстояние. Шаг привязки учитывается.',
-  wingR:'Крыло будет добавлено к правой стене (стена 2).',wingB:'Крыло будет добавлено к задней стене (стена 3).'};
+  wing:'Нажмите на наружную стену основного дома — к ней пристроится крыло 4×4 м (Г-, Т-, П-, Ш-образный или крестовый план). Потом тяните его стены мышью.'};
 const plSnap=v=>{const s=+PL.snap||1;return Math.round(v/s)*s};
 const plClamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const plWR=w=>{const x0=w.x0-(w.uy?w.d/2:0),y0=w.y0-(w.ux?w.d/2:0),x1=w.ux?w.x0+w.L:w.x0+w.d/2,y1=w.uy?w.y0+w.L:w.y0+w.d/2;return [x0,y0,x1,y1]};
@@ -36,11 +36,9 @@ function renderPlan(){
   plDraw();
 }
 function plSetTool(t){PL.tool=t;if(t==='furn')PL.sel=null;if(t!=='ruler')PL.ruler=null;if(t!=='furn')PL.place=null;document.querySelectorAll('#tab-plan [data-tool]').forEach(b=>{const h=/** @type {HTMLElement} */(b);h.setAttribute('aria-pressed',String(h.dataset.tool===t))});
-  if(t==='wingR'||t==='wingB'){const W2=t==='wingR',n=(P.blocks||[]).length;if(n>=2){$('#plHelp').textContent='Сейчас можно не больше двух крыльев.';PL.tool='sel';return}
-    const w=Math.min(4000,W2?+P.B:+P.A);P.blocks=P.blocks||[];P.blocks.push({side:W2?'W2':'W3',off:W2?0:plSnap((+P.A-w)/2),w,depth:4000});PL.sel={k:'wing',i:P.blocks.length-1};PL.tool='sel';plSetTool('sel');schedule(true);return}
   plDraw()}
 function plPt(e){const svg=$('#plSvg'),pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;const q=pt.matrixTransform(svg.getScreenCTM().inverse());return {x:q.x,y:-q.y}}
-function plFit(){const AX=M.AX||M.A,BY=M.BY||M.B,m=1800;PL.view={x:-m,y:-(BY+m),w:AX+2*m,h:BY+2*m}}
+function plFit(){const X0=M.X0||0,Y0=M.Y0||0,AX=M.AX||M.A,BY=M.BY||M.B,m=1800;PL.view={x:X0-m,y:-(BY+m),w:AX-X0+2*m,h:BY-Y0+2*m}}
 function plDraw(){
   const svg=$('#plSvg');if(!svg||!M)return;if(!PL.view||(!PL.user&&!PL.drag))plFit();
   const v=PL.view,cw=svg.clientWidth||800,ch=svg.clientHeight||500,k=Math.max(v.w/cw,v.h/ch),fs=12*k,Y=y=>-y;
@@ -76,8 +74,8 @@ function plDraw(){
   (M.rooms||[]).forEach((r,i)=>{g+=`<text data-k="room" data-i="${i}" x="${r.x}" y="${Y(r.y)}" font-size="${fs}" text-anchor="middle" fill="#17201C">${esc(r.name)}</text><text data-k="room" data-i="${i}" x="${r.x}" y="${Y(r.y)+fs*1.3}" font-size="${fs*.95}" text-anchor="middle" fill="#2D6A4F" font-weight="600">${fmt(r.area,1)} м²</text>`;
     if(Math.abs((r.x1-r.x0)*(r.y1-r.y0)/1e6-r.area)<.05)g+=`<text data-k="room" data-i="${i}" x="${r.x}" y="${Y(r.y)+fs*2.5}" font-size="${fs*.8}" text-anchor="middle" fill="#5B6862">${fmt((r.x1-r.x0)/1000,2)} × ${fmt((r.y1-r.y0)/1000,2)} м</text>`});
   /* размеры */
-  const AX=M.AX||M.A,BY=M.BY||M.B;
-  g+=plDim(0,0,AX,0,-900,k,fs)+plDim(0,0,0,BY,-900,k,fs,true);
+  const AX=M.AX||M.A,BY=M.BY||M.B,X0=M.X0||0,Y0=M.Y0||0;
+  g+=plDim(X0,Y0,AX,Y0,-900,k,fs)+plDim(X0,Y0,X0,BY,-900,k,fs,true);
   if(sel?.k==='iw'){const o=P.walls[sel.i];if(o){[['from',o.from],['to',o.to]].forEach(([e,u])=>{const x=o.axis==='x'?u:o.c,y=o.axis==='x'?o.c:u;g+=`<circle data-k="iwEnd" data-i="${sel.i}" data-e="${e}" cx="${x}" cy="${Y(y)}" r="${6*k}" fill="#fff" stroke="${hl}" stroke-width="${2*k}" style="cursor:move"/>`});g+=plIwDims(sel.i,k,fs)}}
   if(sel?.k==='op'){const o=M.ops[sel.i],w=o&&plWallById(o.wall);if(w){const out=(w.inw?-1:1)*0,sg=-1,base=w.ux?w.y0:w.x0;const n=w.inw?[-w.inw[0],-w.inw[1]]:({W1:[0,-1],W3:[0,1],W2:[1,0],W4:[-1,0]}[w.id]||[w.uy,-w.ux]);
     const off=(w.d/2+600)*(w.ux?n[1]:n[0]),P0=u=>w.ux?[w.x0+u,w.y0]:[w.x0,w.y0+u];[[0,o.x],[o.x,o.x+o.w],[o.x+o.w,w.L]].forEach(([a,b])=>{if(b-a<1)return;const p=P0(a),q=P0(b);g+=plDim(p[0],p[1],q[0],q[1],off,k,fs,!w.ux)})}}
@@ -98,14 +96,19 @@ function plIwDims(i,k,fs){const o=P.walls[i],w=plWallById('I'+(i+1));if(!w)retur
   const c=+o.c,lo=par.filter(q=>q.c<c).sort((a,b)=>b.c-a.c)[0],hi=par.filter(q=>q.c>c).sort((a,b)=>a.c-b.c)[0];let g='';
   if(lo)g+=hz?plDim(m,lo.c+lo.d/2,m,c-w.d/2,0,k,fs,true):plDim(lo.c+lo.d/2,m,c-w.d/2,m,0,k,fs);
   if(hi)g+=hz?plDim(m,c+w.d/2,m,hi.c-hi.d/2,0,k,fs,true):plDim(c+w.d/2,m,hi.c-hi.d/2,m,0,k,fs);return g}
-function plNewIw(p0,p1){const dx=p1.x-p0.x,dy=p1.y-p0.y,hz=Math.abs(dx)>=Math.abs(dy),AX=M.AX||M.A,BY=M.BY||M.B;
-  let a=plSnap(hz?Math.min(p0.x,p1.x):Math.min(p0.y,p1.y)),b=plSnap(hz?Math.max(p0.x,p1.x):Math.max(p0.y,p1.y));const lim=hz?(p0.y<=M.B?M.A:AX):(p0.x<=M.A?M.B:BY);
-  const c=plSnap(hz?p0.y:p0.x),stops=[0,lim,...M.walls.filter(q=>q.zb==null&&!q.ext&&(hz?q.uy:q.ux)&&c>=(hz?q.y0:q.x0)-50&&c<=(hz?q.y0:q.x0)+q.L+50).map(q=>R(hz?q.x0:q.y0))];
+function plNewIw(p0,p1){const dx=p1.x-p0.x,dy=p1.y-p0.y,hz=Math.abs(dx)>=Math.abs(dy);
+  let a=plSnap(hz?Math.min(p0.x,p1.x):Math.min(p0.y,p1.y)),b=plSnap(hz?Math.max(p0.x,p1.x):Math.max(p0.y,p1.y));
+  const rc=[[0,0,M.A,M.B],...(M.wings||[]).map(k=>[k.x0,k.y0,k.x1,k.y1])].find(r=>p0.x>=r[0]&&p0.x<=r[2]&&p0.y>=r[1]&&p0.y<=r[3])||[0,0,M.A,M.B],st=hz?rc[0]:rc[1],lim=hz?rc[2]:rc[3];
+  const c=plSnap(hz?p0.y:p0.x),stops=[st,lim,...M.walls.filter(q=>q.zb==null&&!q.ext&&(hz?q.uy:q.ux)&&c>=(hz?q.y0:q.x0)-50&&c<=(hz?q.y0:q.x0)+q.L+50).map(q=>R(hz?q.x0:q.y0))];
   const near=v=>{const s=stops.reduce((m,t)=>Math.abs(t-v)<Math.abs(m-v)?t:m,Infinity);return Math.abs(s-v)<=300?s:v};a=near(a);b=near(b);
   if(b-a<400)return null;return {axis:hz?'x':'y',c,from:a,to:b,bearing:false}}
 function plDown(e){if(e.button!==0&&e.button!==1)return;const svg=$('#plSvg'),p=plPt(e),t=e.target.closest('[data-k]'),tk=t?.dataset.k;
   svg.setPointerCapture(e.pointerId);
   if(PL.tool==='iw'){PL.drag={k:'newiw',p0:p};return}
+  if(PL.tool==='wing'){const tol=M.d+400,inA=p.x>-tol&&p.x<+P.A+tol,inB=p.y>-tol&&p.y<+P.B+tol,id=inA&&Math.abs(p.y)<tol?'W1':inA&&Math.abs(p.y-P.B)<tol?'W3':inB&&Math.abs(p.x)<tol?'W4':inB&&Math.abs(p.x-P.A)<tol?'W2':null;if(!/^W[1-4]$/.test(id||'')){$('#plHelp').textContent='Нажмите на наружную стену основного дома (стены 1–4).';return}
+    if((P.blocks||[]).length>=6){$('#plHelp').textContent='Не больше шести крыльев.';return}
+    const end=id==='W2'||id==='W4',Ls=end?+P.B:+P.A,w=Math.min(4000,Ls),a=end?p.y:p.x;P.blocks=P.blocks||[];P.blocks.push({side:id,off:plClamp(plSnap(a-w/2),0,Ls-w),w,depth:4000});
+    PL.sel={k:'wing',i:P.blocks.length-1};plSetTool('sel');renderSide();schedule(true);return}
   if(PL.tool==='ruler'){const q={x:plSnap(p.x),y:plSnap(p.y)};PL.ruler={p0:q,p1:q};PL.drag={k:'ruler'};plDraw();return}
   if(PL.tool==='furn'){if(!PL.place){$('#plHelp').textContent='Сначала выберите предмет в каталоге справа.';return}P.furn=P.furn||[];P.furn.push(furnNew(PL.place,plSnap(p.x),plSnap(p.y)));PL.sel={k:'furn',i:P.furn.length-1};PL.place=null;plSetTool('sel');schedule(false);return}
   if(PL.tool==='window'||PL.tool==='door'){let w=t&&(tk==='ext'||tk==='iw')?plWallById(t.dataset.id):null;
@@ -121,7 +124,7 @@ function plDown(e){if(e.button!==0&&e.button!==1)return;const svg=$('#plSvg'),p=
   else if(tk==='iwEnd'){PL.drag={k:'iwEnd',i:+t.dataset.i,e:t.dataset.e,p0:p,P0}}
   else if(tk==='op'){const i=+t.dataset.i,o=P.openings[i],w=plWallById(o.wall);PL.sel={k:'op',i};if(w)PL.drag={k:'op',i,w,grab:(w.ux?p.x-w.x0:p.y-w.y0)-o.x,P0}}
   else if(tk==='ext'){const w=plWallById(t.dataset.id);if(w.wing!=null){const kw=M.wings[w.wing];PL.sel={k:'wing',i:w.wing};
-      const W2=kw.side==='W2',edge=W2?(w.uy?'depth':(Math.abs(p.y-kw.y0)<Math.abs(p.y-kw.y1)?'lo':'hi')):(w.ux?'depth':(Math.abs(p.x-kw.x0)<Math.abs(p.x-kw.x1)?'lo':'hi'));PL.drag={k:'wing',i:w.wing,edge,W2,P0}}
+      const edge=['lo','depth','hi'][+w.id.slice(1)-kw.id0]||'depth';PL.drag={k:'wing',i:w.wing,edge,kw,P0}}
     else{PL.sel={k:'ext',id:w.id};PL.drag={k:'ext',id:w.id,p0:p,P0}}}
   plDraw()}
 function plMove(e){const d=PL.drag;if(!d)return;const p=plPt(e);
@@ -133,15 +136,15 @@ function plMove(e){const d=PL.drag;if(!d)return;const p=plPt(e);
   if(d.k==='iw'){const o=P.walls[d.i];o.c=plSnap(o.axis==='x'?p.y:p.x)}
   else if(d.k==='iwEnd'){const o=P.walls[d.i],u=plSnap(o.axis==='x'?p.x:p.y);if(d.e==='from')o.from=Math.min(u,+o.to-400);else o.to=Math.max(u,+o.from+400)}
   else if(d.k==='op'){const o=P.openings[d.i];o.x=plClamp(plSnap((d.w.ux?p.x-d.w.x0:p.y-d.w.y0)-d.grab),0,Math.max(0,d.w.L-o.w))}
-  else if(d.k==='wing'){const b=P.blocks[d.i],v=plSnap(d.W2?(d.edge==='depth'?p.x:p.y):(d.edge==='depth'?p.y:p.x)),base=d.W2?+P.A:+P.B,lim=d.W2?+P.B:+P.A;
-    if(d.edge==='depth')b.depth=plClamp(v-base,1500,8000);else if(d.edge==='lo'){const e2=+b.off+ +b.w;b.off=plClamp(v,0,e2-1500);b.w=e2-b.off}else b.w=plClamp(v-b.off,1500,lim-b.off)}
+  else if(d.k==='wing'){const b=P.blocks[d.i],kw=d.kw,a=kw.T[0]?p.x:p.y,rr={W1:-p.y,W2:p.x-P.A,W3:p.y-P.B,W4:-p.x}[kw.side],lim=kw.end?+P.B:+P.A;
+    if(d.edge==='depth')b.depth=plClamp(plSnap(rr),1500,8000);else if(d.edge==='lo'){const e2=+b.off+ +b.w;b.off=plClamp(plSnap(a),0,e2-2000);b.w=e2-b.off}else b.w=plClamp(plSnap(a)-b.off,2000,lim-b.off)}
   else if(d.k==='ext'){const A0=+P.A,B0=+P.B;if(d.id==='W2'){P.A=plClamp(plSnap(p.x),3000,24000);P.walls.forEach(w=>{if(w.axis==='x'&&+w.to>=A0-50)w.to=P.A})}
     else if(d.id==='W3'){P.B=plClamp(plSnap(p.y),3000,12000);P.walls.forEach(w=>{if(w.axis==='y'&&+w.to>=B0-50)w.to=P.B})}
     else if(d.id==='W4')plShift('x',plClamp(plSnap(p.x),+P.A-24000,+P.A-3000));else if(d.id==='W1')plShift('y',plClamp(plSnap(p.y),+P.B-12000,+P.B-3000))}
   cancelAnimationFrame(PL.raf);PL.raf=requestAnimationFrame(()=>{try{M=build(P)}catch(err){}plDraw()})}
 /* перенос левой/нижней стены: начало координат остаётся в углу дома, всё внутри сдвигается */
-function plShift(ax,s){if(!s)return;if(ax==='x'){P.A-=s;P.walls.forEach(w=>{if(w.axis==='y')w.c-=s;else{w.from=+w.from<=50?0:w.from-s;w.to-=s}});P.openings.forEach(o=>{if(o.wall==='W1'||o.wall==='W3')o.x-=s});(P.blocks||[]).forEach(b=>{if(b.side==='W3')b.off-=s});(P.rooms||[]).forEach(r=>r.x-=s)}
-  else{P.B-=s;P.walls.forEach(w=>{if(w.axis==='x')w.c-=s;else{w.from=+w.from<=50?0:w.from-s;w.to-=s}});P.openings.forEach(o=>{if(/^(W2|W4|G2|G4)$/.test(o.wall))o.x-=s});(P.blocks||[]).forEach(b=>{if(b.side==='W2')b.off-=s});(P.rooms||[]).forEach(r=>r.y-=s)}}
+function plShift(ax,s){if(!s)return;if(ax==='x'){P.A-=s;P.walls.forEach(w=>{if(w.axis==='y')w.c-=s;else{w.from=+w.from<=50?0:w.from-s;w.to-=s}});P.openings.forEach(o=>{if(o.wall==='W1'||o.wall==='W3')o.x-=s});(P.blocks||[]).forEach(b=>{if(b.side==='W3'||b.side==='W1')b.off-=s});(P.rooms||[]).forEach(r=>r.x-=s)}
+  else{P.B-=s;P.walls.forEach(w=>{if(w.axis==='x')w.c-=s;else{w.from=+w.from<=50?0:w.from-s;w.to-=s}});P.openings.forEach(o=>{if(/^(W2|W4|G2|G4)$/.test(o.wall))o.x-=s});(P.blocks||[]).forEach(b=>{if(b.side==='W2'||b.side==='W4')b.off-=s});(P.rooms||[]).forEach(r=>r.y-=s)}}
 function plUp(e){const d=PL.drag;PL.drag=null;if(!d)return;
   if(d.k==='newiw'){const ln=d.p1&&plNewIw(d.p0,d.p1);if(ln){P.walls.push(ln);PL.sel={k:'iw',i:P.walls.length-1}}plDraw();if(ln)schedule(true);return}
   if(d.k==='ruler')return;
@@ -168,7 +171,7 @@ function plProps(){const box=$('#plProps');if(!box)return;const s=PL.sel,num=(f,
   else if(s.k==='op'){const o=P.openings[s.i],st=M.ops[s.i];if(!o){PL.sel=null;return plProps()}h=`<h3>${o.type==='door'?'Дверь':'Окно'} ${st?.mark||''}</h3><p class="pl-sum">Стена ${esc(o.wall)}</p>
     <label class="pl-f"><span>Тип</span><select data-f="type"><option value="window"${o.type==='window'?' selected':''}>окно</option><option value="door"${o.type==='door'?' selected':''}>дверь</option></select></label>
     ${num('x','Отступ от начала стены',o.x)}${num('w','Ширина',o.w)}${num('h','Высота',o.h)}${o.type==='door'?'':num('sill','Низ от пола',o.sill)}${st&&!st.ok?`<p class="err">${esc(st.msg)}</p>`:''}`}
-  else if(s.k==='wing'){const b=P.blocks[s.i];if(!b){PL.sel=null;return plProps()}h=`<h3>Крыло ${s.i+1} · ${b.side==='W2'?'справа':'сзади'}</h3>${num('off',b.side==='W2'?'Отступ от стены 1':'Отступ от стены 4',b.off)}${num('w','Ширина крыла',b.w)}${num('depth','Вынос крыла',b.depth)}${errs('K'+(s.i+1))}`}
+  else if(s.k==='wing'){const b=P.blocks[s.i];if(!b){PL.sel=null;return plProps()}h=`<h3>Крыло ${s.i+1} · ${({W1:'спереди',W2:'справа',W3:'сзади',W4:'слева'})[b.side]||''}</h3>${num('off',(b.side==='W2'||b.side==='W4')?'Отступ от стены 1':'Отступ от стены 4',b.off)}${num('w','Ширина крыла',b.w)}${num('depth','Вынос крыла',b.depth)}${errs('K'+(s.i+1))}`}
   else if(s.k==='furn'){const f=P.furn[s.i];if(!f){PL.sel=null;return plProps()}h=`<h3>${esc(FURN[f.t]?.n||'Предмет')}</h3>${num('w','Ширина',f.w,'мм',10)}${num('d','Глубина',f.d,'мм',10)}${num('h','Высота',f.h,'мм',10)}${num('e','Низ от пола',f.e,'мм',10)}
     <div class="btns"><button class="btn sm" id="plRot">Повернуть на 90° (R)</button></div>`}
   else if(s.k==='room'){const r=M.rooms[s.i];if(!r){PL.sel=null;return plProps()}h=`<h3>Помещение ${r.no}</h3><label class="pl-f"><span>Название</span><input type="text" data-f="name" value="${esc(r.name)}"></label>
