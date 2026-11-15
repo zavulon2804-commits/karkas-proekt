@@ -62,12 +62,13 @@ function sheetRoof(){
   g+=Rc(Xs(0),Zs(M.zt+M.ha),B/s,M.ha/s,'w');
   if(M.mans&&M.mansOk){g+=Rc(Xs(0),Zs(M.zm),B/s,(M.zm-M.zt-M.ha)/s,'w2');[M.yk,B-M.yk].forEach(y=>g+=Rc(Xs(y-M.kneeD/2),Zs(M.zm+M.kneeH),M.kneeD/s,M.kneeH/s,'wlp'));
     g+=Rc(Xs(M.yT),Zs(M.zc+150),(B-2*M.yT)/s,150/s,'w3');g+=Tx(Xs(B/2),Zs(M.zm+M.mansH/2),'МАНСАРДА',{size:3,cls:'b'})}
-  M.slopes.forEach(sl=>{const ze=sl.zA,zr=sl.zB,yy=sl.y1,o=hr/cs;g+=Pg([[Xs(sl.y0),Zs(ze)],[Xs(yy),Zs(zr)],[Xs(yy),Zs(zr+o)],[Xs(sl.y0),Zs(ze+o)]],'w2');
+  const ex=M.ridgeExt||0;M.slopes.forEach(sl=>{const ze=sl.zA,yy=sl.y1+sl.dir*ex*cs,zr=sl.zB+ex*M.sn,o=hr/cs;g+=Pg([[Xs(sl.y0),Zs(ze)],[Xs(yy),Zs(zr)],[Xs(yy),Zs(zr+o)],[Xs(sl.y0),Zs(ze+o)]],'w2');
     const ofr=(hr+(M.mat.counter?M.mat.counter[0]:0)+M.mat.lath[0]+8)/cs;g+=Ln(Xs(sl.y0),Zs(ze+ofr),Xs(yy),Zs(zr+ofr),'m')});
   if(M.purlin){const pu=M.pur;g+=Rc(Xs(B/2-pu.pb/2),Zs(pu.zPt),pu.pb/s,pu.ph/s,'w3')+Rc(Xs(B/2-pu.qh/2),Zs(pu.zPt-pu.ph),pu.qh/s,pu.Lpost/s,'w2')+Rc(Xs(B/2-pu.qh/2),Zs(M.zt+M.ha+pu.qb),pu.qh/s,pu.qb/s,'w2');
     if(pu.nC){const zc=M.zt+M.ha+pu.qb+pu.Lpost*.6,yC=(zc-M.zr0)/M.tn;g+=Rc(Xs(yC),Zs(zc+pu.cs2[1]/2),(B-2*yC)/s,pu.cs2[1]/s,'w2')+Tx(Xs(B/2)-pu.qh/2/s-1.5,Zs(zc)-1.6,`СХ ${pu.cs2.join('×')}`,{a:'end',size:2.1})}
     g+=Ln(Xs(B/2)+pu.pb/2/s,Zs(pu.zPt-pu.ph/2),Xs(B/2)+pu.pb/2/s+14,Zs(pu.zPt-pu.ph/2)-6)+Tx(Xs(B/2)+pu.pb/2/s+15,Zs(pu.zPt-pu.ph/2)-6.6,`КП ${pu.pb}×${pu.ph}, врубка ${R(pu.notch)}`,{a:'start',size:2.1})+Tx(Xs(B/2)+pu.qh/2/s+1.5,Zs(pu.zPt-pu.ph-pu.Lpost/2),`СТК ${pu.qb}×${pu.qh}`,{a:'start',size:2.1})}
-  else if(M.gable)g+=Rc(Xs(B/2-br/2),Zs(M.zRidge),br/s,hr/s,'w3');
+  else if(M.gable&&M.ridgeJoint!=='lap')g+=Rc(Xs(B/2-br/2),Zs(M.zRidge),br/s,hr/s,'w3');
+  if(M.gable){const zk=M.zr0+B/2*M.tn+hr/cs/2;if(M.ridgeJoint==='lap')g+=Ci(Xs(B/2),Zs(zk),Math.max(.6,6/s),'m');g+=Ln(Xs(B/2)-2,Zs(zk),Xs(B/2)-16,Zs(zk)-9)+Tx(Xs(B/2)-17,Zs(zk)-9.6,M.ridgeJoint==='lap'?`конёк: внахлёст, заход ${M.ridgeExt}, болт М12`:'конёк: в стык с подрезкой, накладки',{a:'end',size:2.1})}
   M.strutY.forEach(y=>g+=Rc(Xs(y-br/2),Zs(M.zU(y)),br/s,(M.zU(y)-M.zr0)/s,'w3'));
   const a0=Xs(0)+(M.gable?14:16),z0p=Zs(M.zr0);g+=`<path d="M${f2(Xs(0)+12)} ${f2(z0p)} A12 12 0 0 0 ${f2(Xs(0)+12*Math.cos(M.al))} ${f2(z0p-12*Math.sin(M.al))}" class="t"/>`+Ln(Xs(0),z0p,Xs(0)+15,z0p)+Tx(a0+1,z0p-2,`${M.deg}°`,{size:2.4,a:'start'});
   g+=chainH([-ov,0,B,B+ov],Xs,Zs(zMin)+7,null);g+=chainH([0,...M.lines.filter(l=>l.axis==='x'&&l.wing==null).map(l=>l.c),B],Xs,Zs(zMin)+15,null);

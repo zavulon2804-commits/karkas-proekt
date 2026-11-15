@@ -214,8 +214,11 @@ function build(P,OPT={}){
   const Lraf=r10(M.Ls+hr*tn);
   /* стропила ската, в который врезается боковое крыло, укорачиваются до ендовы (нарожники) */
   const cutS=(sl,x)=>{if(!gable)return 0;let sv=0;(M.wingRoofs||[]).filter(r=>!r.end&&(r.k.side==='W3'?sl.dir<0:sl.dir>0)).forEach(r=>{const dx=Math.abs(x-r.xc);if(dx<r.half+ov)sv=Math.max(sv,(ov+r.half-dx)/cs)});return sv};
+  /* узел на коньке: «в стык с подрезкой» — торцы пары сходятся на оси конька; «внахлёст» — стропила второго ската сдвинуты на толщину и заходят за конёк на 1,5h */
+  const lap=gable&&P.ridgeJoint==='lap',ext=lap?r10(1.5*hr):0;M.ridgeJoint=gable?(lap?'lap':'butt'):null;M.ridgeExt=ext;
   slopes.forEach(sl=>{[...xsR.map(x=>[x,'СН']),...barge.map(x=>[x,'СНФ'])].forEach(([x,role])=>{const sv=cutS(sl,x);if(sv>=sl.len-80)return;
-    bar('roof',sv>0?'НР':role,[br,hr],1,at(sl,x,sv,hr/2),at(sl,x,sl.len,hr/2),sl.n,hr,br,{L:sv>0?r10(sl.len-sv+hr*tn):Lraf})})});
+    const xx=lap&&sl.dir<0?(x>A/2&&role==='СНФ'?x-br:x+br):x;
+    bar('roof',sv>0?'НР':role,[br,hr],1,at(sl,xx,sv,hr/2),at(sl,xx,sl.len+ext,hr/2),sl.n,hr,br,{L:sv>0?r10(sl.len-sv+ext+hr*tn):r10(Lraf+ext)})})});
   M.zRidge=gable?zr0+B/2*tn+hr/cs:zr0+(B+ov)*tn+hr/cs;
   M.purlin=gable&&!M.mans&&P.rafterSys==='purlin';
   if(M.purlin){const pb=n(P.purB),ph=n(P.purH),qb=n(P.postB),qh=n(P.postH),ps=Math.max(1000,n(P.postS)),zPt=zr0+(B/2-pb/2)*tn,zL1=zt+ha+qb;

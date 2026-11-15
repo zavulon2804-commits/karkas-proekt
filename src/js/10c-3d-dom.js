@@ -10,8 +10,8 @@ function planarGeo(pts,holes=[]){const n=[0,0,0];pts.forEach((p,i)=>{const q=pts
 function clipZ(pts,z0){const out=[];pts.forEach((p,i)=>{const q=pts[(i+1)%pts.length],pin=p[2]>=z0-.5,qin=q[2]>=z0-.5;if(pin)out.push(p);if(pin!==qin){const t=(z0-p[2])/(q[2]-p[2]);out.push([p[0]+(q[0]-p[0])*t,p[1]+(q[1]-p[1])*t,z0])}});return out}
 function buildHouse3D(){
   const G={};['arWalls','arRoof','arPart','arFurn','arFloor'].forEach(k=>{const g=new THREE.Group();g.name=k;G[k]=g;R3.root.add(g);R3.groups[k]=g});
-  const mWall=mat3('arW',0xEFE7D8),mPart=mat3('arP',0xF7F4EE),mRoof=mat3('arR',0x5E6B78,{side:THREE.DoubleSide}),mEdge=mat3('arE',0x47525d,{side:THREE.DoubleSide}),
-    mGlass=mat3('arG',0x9cc3e0,{transparent:true,opacity:.45}),mDoor=mat3('arD',0x8a5a33),mGab=mat3('arGb',0xEFE7D8,{side:THREE.DoubleSide});
+  const mWall=mat3('arW'+(P.finFacade||''),FIN.facade[P.finFacade]?.col||0xEFE7D8),mPart=mat3('arP',0xF7F4EE),mRoof=mat3('arR',0x5E6B78,{side:THREE.DoubleSide}),mEdge=mat3('arE',0x47525d,{side:THREE.DoubleSide}),
+    mGlass=mat3('arG',0x9cc3e0,{transparent:true,opacity:.45}),mDoor=mat3('arD',0x8a5a33),mGab=mat3('arGb'+(P.finFacade||''),FIN.facade[P.finFacade]?.col||0xEFE7D8,{side:THREE.DoubleSide});
   const z0=M.z0,zTop=M.zr0,box=(grp,mt,x0,y0,z1,x1,y1,z2,info)=>{if(x1-x0<1||y1-y0<1||z2-z1<1)return;const m=new THREE.Mesh(boxGeo(x1-x0,y1-y0,z2-z1),mt);m.position.set((x0+x1)/2,(y0+y1)/2,(z1+z2)/2);m.userData.m={ar:info};grp.add(m)};
   /* стены: сплошные участки, под окнами и над проёмами; наружные — от низа ростверка до верха перекрытия */
   M.walls.filter(w=>w.zb==null).forEach(w=>{const ext=w.ext,grp=ext?G.arWalls:G.arPart,mt=ext?mWall:mPart,zb=ext?M.H0:z0,zt=ext?zTop:M.zt,info=w.name;
@@ -30,7 +30,7 @@ function buildHouse3D(){
   F.filter(f=>f.k==='roof'||f.k==='edge').forEach(f=>{const m=new THREE.Mesh(planarGeo(f.pts),f.k==='roof'?mRoof:mEdge);m.userData.m={ar:'Кровля: '+M.mat.name.toLowerCase()};G.arRoof.add(m)});
   /* полы помещений */
   const fc={living:0xD8C29C,aux:0xCDBFA8,tech:0xBDB6AA};
-  (M.rooms||[]).forEach(r=>r.cells.forEach(c=>box(G.arFloor,mat3('arF'+r.kind,fc[r.kind]||0xCDBFA8),c[0],c[1],z0-30,c[2],c[3],z0,`${r.name}, ${fmt(r.area,1)} м²`)));
+  (M.rooms||[]).forEach(r=>r.cells.forEach(c=>{const fk=roomFin(r).floor;box(G.arFloor,mat3('arF'+fk,FIN.floor[fk]?.col||fc[r.kind]||0xCDBFA8),c[0],c[1],z0-30,c[2],c[3],z0,`${r.name}, ${fmt(r.area,1)} м² · пол: ${FIN.floor[fk]?.n||''}`)}));
   /* мебель и оборудование */
   (P.furn||[]).forEach(f=>{const c=FURN[f.t];if(!c)return;const [x0,y0,x1,y1]=furnFoot(f),e=+f.e||0;box(G.arFurn,mat3('arM'+c.cat,FURN_COL[c.cat]),x0,y0,z0+e,x1,y1,z0+e+(+f.h||500),c.n+` ${f.w}×${f.d}×${f.h}`)});
 }

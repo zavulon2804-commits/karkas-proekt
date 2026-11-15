@@ -440,13 +440,13 @@ const GRP_ORDER=Object.keys(GRP);
 /* ---------- пример проекта ---------- */
 const DEF={
   name:'Дом 9×7, двускатная крыша',
-  A:9000,B:7000,H:2800,furn:[],
+  A:9000,B:7000,H:2800,furn:[],finWall:'paint',finFloor:'laminate',finCeil:'gkl',finFacade:'imit',
   tech:'free',corner:'warm',topPlates:2,instLayer:false,windBoard:false,
   lumber:'planed',studB:45,studH:145,studS:625,partH:95,partS:600,lintelH:195,lintelPly:2,wallOsb:9,
   bracing:'sheathing',sheathMat:'osb9',nailStep:150,braceB:25,braceH:100,
   pile:'p108',pileFd:50,soil:'loam',freeze:1400,pileMaxS:2500,pileLen:'auto',plinth:500,
   beamType:'brus',beamB:150,beamH:200,packB:45,packH:195,beamPly:3,beamsMid:'auto',joistB:45,joistH:195,joistS:600,floorOsb:22,
-  roof:'gable',slope:30,roofMat:'metal',overhang:500,gableOver:400,rafterB:45,rafterH:195,rafterS:600,attB:45,attH:195,strut:false,rafterSys:'hang',purB:150,purH:200,postB:100,postH:100,postS:3000,purStruts:true,collar:true,mansard:false,kneeH:1200,mansH:2400,kneeD:95,gMans:.6,pMans:1.5,
+  roof:'gable',slope:30,roofMat:'metal',overhang:500,gableOver:400,rafterB:45,rafterH:195,rafterS:600,attB:45,attH:195,strut:false,rafterSys:'hang',ridgeJoint:'butt',purB:150,purH:200,postB:100,postH:100,postS:3000,purStruts:true,collar:true,mansard:false,kneeH:1200,mansH:2400,kneeD:95,gMans:.6,pMans:1.5,
   snow:'III',wind:'I',terrain:'B',gFloor:.5,pFloor:1.5,gAttic:.35,pAttic:.7,gWall:.5,
   stocks:'6000, 4500, 3000',kerf:4,
   prices:{wood:28000,osb9:780,osb12:980,osb22:1950,insul:4300,wind:2600,vapor:1700,roofMetal:650,roofProf:520,roofSoft:820,roofOndulin:430,pile:2900,pileWork:1300,rc20:1500,rc30:2400,rcDrive:3500,plate:450,concrete:6800,rebar:80,sleeve:120,boredWork:1800,nails:260,screws:950,bracket:65,antiseptic:160,anchor:190,ply9:1350,csp12:1150,windBoard:750},
@@ -793,8 +793,11 @@ function build(P,OPT={}){
   const Lraf=r10(M.Ls+hr*tn);
   /* стропила ската, в который врезается боковое крыло, укорачиваются до ендовы (нарожники) */
   const cutS=(sl,x)=>{if(!gable)return 0;let sv=0;(M.wingRoofs||[]).filter(r=>!r.end&&(r.k.side==='W3'?sl.dir<0:sl.dir>0)).forEach(r=>{const dx=Math.abs(x-r.xc);if(dx<r.half+ov)sv=Math.max(sv,(ov+r.half-dx)/cs)});return sv};
+  /* узел на коньке: «в стык с подрезкой» — торцы пары сходятся на оси конька; «внахлёст» — стропила второго ската сдвинуты на толщину и заходят за конёк на 1,5h */
+  const lap=gable&&P.ridgeJoint==='lap',ext=lap?r10(1.5*hr):0;M.ridgeJoint=gable?(lap?'lap':'butt'):null;M.ridgeExt=ext;
   slopes.forEach(sl=>{[...xsR.map(x=>[x,'СН']),...barge.map(x=>[x,'СНФ'])].forEach(([x,role])=>{const sv=cutS(sl,x);if(sv>=sl.len-80)return;
-    bar('roof',sv>0?'НР':role,[br,hr],1,at(sl,x,sv,hr/2),at(sl,x,sl.len,hr/2),sl.n,hr,br,{L:sv>0?r10(sl.len-sv+hr*tn):Lraf})})});
+    const xx=lap&&sl.dir<0?(x>A/2&&role==='СНФ'?x-br:x+br):x;
+    bar('roof',sv>0?'НР':role,[br,hr],1,at(sl,xx,sv,hr/2),at(sl,xx,sl.len+ext,hr/2),sl.n,hr,br,{L:sv>0?r10(sl.len-sv+ext+hr*tn):r10(Lraf+ext)})})});
   M.zRidge=gable?zr0+B/2*tn+hr/cs:zr0+(B+ov)*tn+hr/cs;
   M.purlin=gable&&!M.mans&&P.rafterSys==='purlin';
   if(M.purlin){const pb=n(P.purB),ph=n(P.purH),qb=n(P.postB),qh=n(P.postH),ps=Math.max(1000,n(P.postS)),zPt=zr0+(B/2-pb/2)*tn,zL1=zt+ha+qb;
@@ -1030,18 +1033,26 @@ function calc(M){
     if(pu.aS>=300){const Ls=Math.hypot(pu.aS,pu.Lpost),sa=pu.Lpost/Ls,Ns=qd*pu.aS/sa,lamS=Ls/(.289*bm),phS=lamS<=70?1-.8*(lamS/100)**2:3000/lamS**2;
       push('strut_p','Подкос к коньковому прогону',`${pu.qb}×${pu.qh}`,`длина ${R(Ls)} мм · угол ${R(Math.atan2(pu.Lpost,pu.aS)*180/Math.PI)}° · вынос ${R(pu.aS)} мм`,Ns/(phS*Ar*R_C),[['Сжатие N, кН',fmt(Ns/1000,2)],['Гибкость λ (пред. 150 для связей)',fmt(lamS,0)],['φ',fmt(phS,2)]],lamS<=150);
       out.at(-1).note='Подкос врубается в стойку и прогон, крепится скобами; уменьшает пролёт прогона. СП 64.13330: для элементов связей λ ≤ 150.'}
-    push('notch','Врубка стропила на прогоне',`глубина ${R(pu.notch)} мм`,`стропило ${M.br}×${M.hr} опирается на прогон шириной ${pu.pb} мм при уклоне ${M.deg}°`,pu.notch/(M.hr/3),[['Глубина врубки, мм',R(pu.notch)],['Предел по СП 64.13330 (1/3 h), мм',R(M.hr/3)],['Рекомендуемый предел (1/4 h), мм',R(M.hr/4)]]);
+    if(M.ridgeJoint==='lap'){const seat=Math.min(pu.pb,M.hr/4/M.tn);pu.seat=seat;pu.notch=seat*M.tn}else pu.seat=pu.pb/2;
+    push('notch','Врубка стропила на прогоне',`глубина ${R(pu.notch)} мм`,`стропило ${M.br}×${M.hr} опирается на прогон шириной ${pu.pb} мм при уклоне ${M.deg}° · ${M.ridgeJoint==='lap'?`внахлёст, подрезка на длину ${R(pu.seat)} мм`:'в стык, каждое стропило на половине прогона'}`,pu.notch/(M.hr/3),[['Глубина врубки, мм',R(pu.notch)],['Предел по СП 64.13330 (1/3 h), мм',R(M.hr/3)],['Рекомендуемый предел (1/4 h), мм',R(M.hr/4)]]);
     out.at(-1).note='СП 64.13330: глубина врубки в опорных узлах — не более 1/3 высоты сечения. Если врубка глубже — подбалка (кобылка) или опорный брусок вместо врубки.';
-    const R1=qRf*sR*Lh/1000/2*1000,Ab=M.br*pu.pb/2,sg=R1/Ab;
-    push('bearing','Смятие стропила на прогоне',`площадка ${M.br}×${R(pu.pb/2)}`,`опорная реакция стропила ${fmt(R1/1000,2)} кН`,sg/Rcm90,[['Напряжение смятия, МПа',fmt(sg,2)],['Rсм.90 поперёк волокон, МПа',Rcm90]]);
-    out.at(-1).note='СП 64.13330: смятие поперёк волокон в опорных частях и узловых примыканиях, Rсм.90 = 3 МПа.'}
+    const R1=qRf*sR*Lh/1000/2*1000,Ab=M.br*pu.seat,sg=R1/Ab;
+    push('bearing','Смятие стропила на прогоне',`площадка ${M.br}×${R(pu.seat)}`,`опорная реакция стропила ${fmt(R1/1000,2)} кН`,sg/Rcm90,[['Напряжение смятия, МПа',fmt(sg,2)],['Rсм.90 поперёк волокон, МПа',Rcm90]]);
+    out.at(-1).note='СП 64.13330: смятие поперёк волокон в опорных частях и узловых примыканиях, Rсм.90 = 3 МПа.';
+    {const V=l.S*1.4*sR*(M.B/1000)/8,lapJ=M.ridgeJoint==='lap',a=M.br/10,d=1.2,Tb=Math.min(.8*a*d,Math.min(1.8*d*d+.02*a*a,2.5*d*d)),nb=Math.max(1,Math.ceil(V/Tb)),d4=.4,Tg=Math.min(.35*2.5*d4,Math.min(2.5*d4*d4+.01*6.25,4*d4*d4)),ng=Math.max(4,Math.ceil(V/(2*Tg)));
+      if(lapJ)push('node_ridge','Коньковый узел: стропила внахлёст на прогоне',`болт М12 × ${nb} + скобы к прогону`,`поперечная сила при одностороннем снеге ${fmt(V,2)} кН`,V/(nb*Tb),[['Сила в узле V = S·s·B/8, кН',fmt(V,2)],['Болт М12, один срез (СП 64.13330), кН',fmt(Tb,2)],['Болтов на пару стропил',nb]]);
+      else push('node_ridge','Коньковый узел: стропила в стык на прогоне',`накладки 25×100, ${ng} гв. на сторону + скобы`,`поперечная сила при одностороннем снеге ${fmt(V,2)} кН`,V/(ng*2*Tg),[['Сила в узле V = S·s·B/8, кН',fmt(V,2)],['Гвоздь через накладку 25 мм, кН',fmt(Tg,2)],['Гвоздей в каждое стропило',ng]]);
+      out.at(-1).note=lapJ?'Стропила пары ставят рядом со сдвигом на толщину, заводят за конёк на 1,5h и стягивают болтом М12 с шайбами. Нагель по СП 64.13330: T = min(0,8·a·d; 1,8·d² + 0,02·a² ≤ 2,5·d²). К прогону — скобы или уголки.':'Торцы стропил запиливают по уклону, пару стягивают накладками 25×100 (или металлическими пластинами) с двух сторон. К прогону — скобы или уголки.'}}
   else if(M.gable&&!M.mans){/* висячая: коньковый узел и нижний узел стропило — затяжка */
     const B=M.B/1000,tn=M.tn,Hn=qRf*sR*B/(4*tn),d4=.4,Tn=c=>Math.min(.35*c*d4,Math.min(2.5*d4*d4+.01*c*c,4*d4*d4)),Tt=Tn(M.br/10),nT=Math.max(4,Math.ceil(Hn/Tt));
     push('node_tie','Нижний узел: стропило — затяжка (балка перекрытия)',`${nT} гвоздей 4×100`,`распор от пары стропил ${fmt(Hn,2)} кН`,nT/12,[['Распор H = q·s·B/(4·tg α), кН',fmt(Hn,2)],['Несущая способность гвоздя 4×100, кН',fmt(Tt,2)],['Нужно гвоздей в узел',nT],['Допустимо в узле без болтов',12]]);
     out.at(-1).note='СП 64.13330: T = min(0,35·c·d; 2,5·d² + 0,01·a² ≤ 4·d²). При большем числе гвоздей — болт М12 с шайбами или металлическая пластина.';
     const V=l.S*1.4*sR*B/8,Tr=Tn(2.5),nR=Math.max(4,Math.ceil(V/(2*Tr)));
-    push('node_ridge','Коньковый узел: накладки на стропилах',`накладки 25×100, ${nR} гв. на сторону`,`поперечная сила при одностороннем снеге ${fmt(V,2)} кН`,nR/10,[['Сила в узле V = S·s·B/8, кН',fmt(V,2)],['Гвоздь через накладку 25 мм, кН',fmt(Tr,2)],['Гвоздей в каждое стропило (накладки с двух сторон)',nR]]);
-    out.at(-1).note='Пару стропил на коньке соединяют накладками из доски 25×100 с двух сторон на гвоздях или болтом М12. Коньковая доска — не несущий элемент.'}
+    if(M.ridgeJoint==='lap'){const a=M.br/10,d=1.2,Tb=Math.min(.8*a*d,Math.min(1.8*d*d+.02*a*a,2.5*d*d)),nb=Math.max(1,Math.ceil(V/Tb));
+      push('node_ridge','Коньковый узел: стропила внахлёст',`болт М12 × ${nb}`,`поперечная сила при одностороннем снеге ${fmt(V,2)} кН`,V/(nb*Tb),[['Сила в узле V = S·s·B/8, кН',fmt(V,2)],['Болт М12, один срез (СП 64.13330), кН',fmt(Tb,2)],['Болтов на пару стропил',nb],['Заход за конёк, мм',M.ridgeExt]]);
+      out.at(-1).note='Стропила пары ставят рядом со сдвигом на толщину доски, заводят за конёк на 1,5h и стягивают болтом М12 с шайбами. Нагель по СП 64.13330: T = min(0,8·a·d; 1,8·d² + 0,02·a² ≤ 2,5·d²). Коньковая доска — не несущий элемент.'}
+    else{push('node_ridge','Коньковый узел: стропила в стык с подрезкой',`накладки 25×100, ${nR} гв. на сторону`,`поперечная сила при одностороннем снеге ${fmt(V,2)} кН`,nR/10,[['Сила в узле V = S·s·B/8, кН',fmt(V,2)],['Гвоздь через накладку 25 мм, кН',fmt(Tr,2)],['Гвоздей в каждое стропило (накладки с двух сторон)',nR]]);
+      out.at(-1).note='Торцы пары стропил запиливают по уклону (подрезка) и сводят в стык на оси конька; соединяют накладками из доски 25×100 с двух сторон на гвоздях или металлическими зубчатыми пластинами. Коньковая доска — не несущий элемент.'}}
   /* крылья: ендовная балка и балки перекрытия крыла */
   (M.wingRoofs||[]).forEach(r=>{const k=r.k,iw=k.i+1;
     const Lw=k.Wd-M.d;if(Lw>M.La+1){const b=M.ba,h=M.ha,qd=(l.gA*1.2+l.pA*1.3)*sR+SELF*b*h*1.1,qn=(l.gA+l.pA)*sR+SELF*b*h,c=bend({b,h,L:Lw,qd,qn,lim:200});
@@ -1293,6 +1304,57 @@ function spec(M,C){
   return {marks,cuts,stocks,kerf,woodVol,netVol,woodSum,mats,total,areas:{wallNet,gabA,floorA,roofA,opsA,partA},osb:{osbW,osbF,osbR}};
 }
 
+/* ---------- АР: отделка помещений и фасада, площади и смета отделки ----------
+   Вид отделки — по умолчанию из P.finWall/finFloor/finCeil/finFacade, для помещения — P.rooms[i].wallF/floorF/ceilF.
+   Состав: [материал, ед., расход на 1 м², цена ₽ за ед.]. Цены — ориентировочные, правятся в справочнике ниже. */
+/** @type {any} */
+const FIN={
+  wall:{paint:{n:'ГКЛ 12,5 + шпаклёвка + покраска',c:[['ГКЛ 12,5 мм','м²',1.1,190],['Шпаклёвка финишная','кг',1,45],['Грунтовка','л',.15,120],['Краска интерьерная','л',.3,450],['Саморезы для ГКЛ','шт',25,.6]],col:0xEFEAE0},
+    wallpaper:{n:'ГКЛ 12,5 + шпаклёвка + обои',c:[['ГКЛ 12,5 мм','м²',1.1,190],['Шпаклёвка финишная','кг',.8,45],['Обои флизелиновые','м²',1.15,350],['Клей обойный','кг',.03,800],['Саморезы для ГКЛ','шт',25,.6]],col:0xE6DCCB},
+    lining:{n:'Вагонка сосна, класс АВ + масло',c:[['Вагонка сосна 12,5×96','м²',1.1,650],['Кляймеры','шт',18,1.5],['Масло / лак','л',.12,900]],col:0xE3C99B},
+    tile:{n:'ГКЛВ 12,5 + гидроизоляция + плитка',c:[['ГКЛВ 12,5 мм','м²',1.1,270],['Гидроизоляция обмазочная','кг',1,160],['Плитка керамическая','м²',1.1,1100],['Клей плиточный','кг',5,25],['Затирка','кг',.4,180]],col:0xDCE4E8},
+    osb:{n:'OSB-3 12 мм + покраска',c:[['OSB-3 12 мм','м²',1.1,520],['Краска по дереву','л',.3,550]],col:0xD9BF8E}},
+  floor:{laminate:{n:'Ламинат 33 кл. на подложке',c:[['Ламинат 33 класс','м²',1.07,950],['Подложка 3 мм','м²',1.05,90]],sk:1,col:0xC9A877},
+    tile:{n:'Керамогранит на клею',c:[['Керамогранит','м²',1.08,1300],['Клей плиточный','кг',6,25],['Затирка','кг',.3,180],['Гидроизоляция обмазочная','кг',1.2,160]],col:0xC8CCCC},
+    board:{n:'Инженерная доска',c:[['Инженерная доска','м²',1.05,3500],['Подложка','м²',1.05,150]],sk:1,col:0xA9825A},
+    vinyl:{n:'Кварцвинил SPC',c:[['Кварцвинил SPC','м²',1.07,1600],['Подложка','м²',1.05,120]],sk:1,col:0xBFA58A},
+    linoleum:{n:'Линолеум бытовой',c:[['Линолеум','м²',1.1,700]],sk:1,col:0xB9AE97}},
+  ceil:{gkl:{n:'ГКЛ 9,5 + шпаклёвка + покраска',c:[['ГКЛ 9,5 мм','м²',1.1,170],['Шпаклёвка финишная','кг',.8,45],['Краска для потолков','л',.3,420],['Саморезы для ГКЛ','шт',25,.6]]},
+    lining:{n:'Вагонка сосна + масло',c:[['Вагонка сосна 12,5×96','м²',1.1,650],['Кляймеры','шт',18,1.5],['Масло / лак','л',.12,900]]},
+    stretch:{n:'Натяжной потолок ПВХ',c:[['Натяжной потолок ПВХ (с монтажом)','м²',1,650]]}},
+  facade:{imit:{n:'Имитация бруса 20×145',c:[['Имитация бруса 20×145','м²',1.12,750],['Брусок обрешётки 25×50','м',2.2,40],['Антисептик','л',.25,250]],col:0xD8B47E},
+    siding:{n:'Виниловый сайдинг',c:[['Сайдинг виниловый','м²',1.12,450],['Брусок обрешётки 25×50','м',2.2,40],['Планки и профили','м²',1,90]],col:0xE8E4DA},
+    plank:{n:'Планкен лиственница',c:[['Планкен лиственница 20×140','м²',1.1,1900],['Брусок обрешётки 25×50','м',2.2,40],['Масло для фасада','л',.15,1200]],col:0xB98552},
+    fiber:{n:'Фиброцементный сайдинг',c:[['Фиброцементный сайдинг','м²',1.1,1600],['Брусок обрешётки 25×50','м',2.2,40],['Крепёж и профили','м²',1,150]],col:0xC9CBC6},
+    block:{n:'Блок-хаус 36×140',c:[['Блок-хаус 36×140','м²',1.12,950],['Брусок обрешётки 25×50','м',2.2,40],['Антисептик','л',.25,250]],col:0xD4A86C}}};
+/** @type {any[]} */
+const FIN_SKIRT=['Плинтус напольный','м',1.05,250];
+const FIN_WET=/сануз|ванн|душ|туал|с\/у|wc|постир|баня|парил/i,FIN_TILEFLOOR=/котел|котёл|кухн|прихож|тамбур|холл|топоч/i;
+const finOpts=t=>Object.entries(FIN[t]).map(([k,v])=>[k,v.n]);
+/* длина контура объединения прямоугольников (кромки, общие с соседними клетками, не считаются) */
+function cellsPerim(cells){let L=0;cells.forEach((c,ci)=>[[c[0],c[1],c[2],c[1],'h'],[c[0],c[3],c[2],c[3],'h'],[c[0],c[1],c[0],c[3],'v'],[c[2],c[1],c[2],c[3],'v']].forEach(([x0,y0,x1,y1,o])=>{
+  let segs=[o==='h'?[x0,x1]:[y0,y1]];const k=o==='h'?y0:x0;
+  cells.forEach((q,qi)=>{if(qi===ci)return;const cov=o==='h'?((Math.abs(q[1]-k)<1||Math.abs(q[3]-k)<1)?[q[0],q[2]]:null):((Math.abs(q[0]-k)<1||Math.abs(q[2]-k)<1)?[q[1],q[3]]:null);if(!cov)return;
+    segs=segs.flatMap(([a,b])=>{const lo=Math.max(a,cov[0]),hi=Math.min(b,cov[1]);return hi-lo<1?[[a,b]]:[[a,lo],[hi,b]].filter(([p,q2])=>q2-p>1)})});
+  segs.forEach(([a,b])=>L+=b-a)}));return L}
+function roomFin(r){const q=r.ref>=0?(P.rooms||[])[r.ref]:null,wet=FIN_WET.test(r.name||''),tf=wet||FIN_TILEFLOOR.test(r.name||'');
+  const pick=(t,f,def)=>{const v=q?.[f];return FIN[t][v]?v:def};
+  return {wall:pick('wall','wallF',wet?'tile':(FIN.wall[P.finWall]?P.finWall:'paint')),floor:pick('floor','floorF',tf?'tile':(FIN.floor[P.finFloor]?P.finFloor:'laminate')),ceil:pick('ceil','ceilF',FIN.ceil[P.finCeil]?P.finCeil:'gkl')}}
+function finishCalc(M){
+  const rooms=M.rooms||[],H=M.H,opA=rooms.map(()=>0),inRoom=(x,y)=>rooms.findIndex(r=>r.cells.some(c=>x>c[0]-1&&x<c[2]+1&&y>c[1]-1&&y<c[3]+1));
+  M.ops.filter(o=>o.ok).forEach(o=>{const w=M.walls.find(q=>q.id===o.wall);if(!w||w.zb!=null)return;const u=o.x+o.w/2,px=w.x0+w.ux*u,py=w.y0+w.uy*u,n=[-w.uy,w.ux],off=w.d/2+30;
+    [1,-1].forEach(sg=>{const i=inRoom(px+n[0]*off*sg,py+n[1]*off*sg);if(i>=0)opA[i]+=o.w*o.h/1e6})});
+  const items=new Map(),add=(grp,c,qty)=>{const k=c[0]+'|'+c[1];const it=items.get(k)||{grp,name:c[0],unit:c[1],price:c[3],qty:0};it.qty+=qty;items.set(k,it)};
+  const cost=(t,key,area)=>{const f=FIN[t][key];let s=0;f.c.forEach(c=>{add(t,c,c[2]*area);s+=c[2]*area*c[3]});return s};
+  const out=rooms.map((r,i)=>{const f=roomFin(r),per=cellsPerim(r.cells)/1000,wallA=per*H/1000,net=Math.max(0,wallA-opA[i]);
+    let sum=cost('wall',f.wall,net)+cost('floor',f.floor,r.area)+cost('ceil',f.ceil,r.area);
+    if(FIN.floor[f.floor].sk){add('floor',FIN_SKIRT,per*FIN_SKIRT[2]);sum+=per*FIN_SKIRT[2]*FIN_SKIRT[3]}
+    return {no:r.no,name:r.name,area:r.area,per,wallA,opA:opA[i],net,f,sum}});
+  /* фасад: наружные грани стен с фронтонами (как на листе «Фасады») минус проёмы */
+  let facA=0,facOp=0;try{facadeFaces().forEach(fc=>{if(fc.k!=='wall'&&fc.k!=='window'&&fc.k!=='door')return;const ax=fc.nv&&fc.nv[0]!==0?1:0,pts=fc.pts.map(p=>[p[ax],p[2]]),A=Math.abs(pts.reduce((a,p,j)=>{const q=pts[(j+1)%pts.length];return a+p[0]*q[1]-q[0]*p[1]},0)/2)/1e6;if(fc.k==='wall')facA+=A;else facOp+=A})}catch(e){}
+  const fk=FIN.facade[P.finFacade]?P.finFacade:'imit',facNet=Math.max(0,facA-facOp),facSum=cost('facade',fk,facNet);
+  const list=[...items.values()].map(it=>({...it,qty:it.unit==='шт'?Math.ceil(it.qty):it.qty,sum:(it.unit==='шт'?Math.ceil(it.qty):it.qty)*it.price}));
+  return {rooms:out,facade:{key:fk,area:facA,op:facOp,net:facNet,sum:facSum},items:list,total:out.reduce((s,r)=>s+r.sum,0)+facSum}}
 /* ---------- советы ---------- */
 function advice(M,C,S){
   const P=M.P,l=C.l,out=[];
@@ -1445,6 +1507,8 @@ const FORM=[
   {id:'iw',t:'АР · Перегородки',custom:'iw'},
   {id:'blocks',t:'АР · Крылья дома (Г-, Т-, П-образный план)',custom:'blocks'},
   {id:'rooms',t:'АР · Помещения',custom:'rooms'},
+  {id:'fin',t:'АР · Отделка',f:[{k:'finFacade',l:'Фасад',type:'sel',opts:finOpts('facade'),wide:true},{k:'finWall',l:'Стены помещений (по умолчанию)',type:'sel',opts:finOpts('wall'),wide:true},{k:'finFloor',l:'Пол (по умолчанию)',type:'sel',opts:finOpts('floor'),wide:true},{k:'finCeil',l:'Потолок (по умолчанию)',type:'sel',opts:finOpts('ceil'),wide:true},
+    {hint:'Санузлам и ванным плитка назначается сама (по названию помещения); котельной, кухне и прихожей — керамогранит на пол. Отделку отдельной комнаты меняйте на плане: нажмите на помещение.'}]},
   {id:'found',t:'КР · Фундамент и пол',f:[
     {k:'pile',l:'Свая',type:'sel',opts:opt(PILES),wide:true},
     {k:'pileFd',l:'Несущая способность сваи',u:'кН',min:5,max:300,step:1,show:()=>P.pile==='manual'},
@@ -1472,6 +1536,7 @@ const FORM=[
     {k:'rafterS',l:'Шаг стропил',u:'мм',min:300,max:1200,step:5},
     {k:'attSec',l:'Балка перекрытия',type:'sec',keys:['attB','attH'],rows:()=>frameRows(r=>r.b>=40&&r.h>=120)},
     {k:'rafterSys',l:'Стропильная система',type:'sel',opts:[['hang','Висячая — балки перекрытия работают затяжками'],['purlin','Наслонная — коньковый прогон на стойках']],wide:true,show:()=>!P.mansard&&P.roof!=='shed'},
+    {k:'ridgeJoint',l:'Стропила на коньке',type:'sel',opts:[['butt','В стык с подрезкой — торцы запилены по уклону'],['lap','Внахлёст — стропила рядом, стянуты болтом']],wide:true,show:()=>P.roof!=='shed'},
     {k:'purSec',l:'Коньковый прогон (брус)',type:'sec',keys:['purB','purH'],rows:()=>dbRows('beam'),show:()=>P.rafterSys==='purlin'&&!P.mansard&&P.roof!=='shed'},
     {k:'postSec',l:'Стойка и лежень (брус)',type:'sec',keys:['postB','postH'],rows:()=>dbRows('beam'),show:()=>P.rafterSys==='purlin'&&!P.mansard&&P.roof!=='shed'},
     {k:'postS',l:'Шаг стоек прогона',u:'мм',min:1500,max:6000,step:100,show:()=>P.rafterSys==='purlin'&&!P.mansard&&P.roof!=='shed'},
@@ -1516,7 +1581,7 @@ const FORM=[
     {hint:'Цены примерные — впишите свои из прайса поставщика.'}]},
   {id:'file',t:'Файл проекта',custom:'file'}
 ];
-const F_ORDER=['site','loads','house','blocks','iw','ops','rooms','roof','found','walls','cutp','prices','file'];FORM.sort((a,c)=>F_ORDER.indexOf(a.id)-F_ORDER.indexOf(c.id));
+const F_ORDER=['site','loads','house','blocks','iw','ops','rooms','fin','roof','found','walls','cutp','prices','file'];FORM.sort((a,c)=>F_ORDER.indexOf(a.id)-F_ORDER.indexOf(c.id));
 const getK=k=>k.split('.').reduce((o,x)=>o?.[x],P);
 const setK=(k,v)=>{const p=k.split('.');let o=P;for(let i=0;i<p.length-1;i++)o=o[p[i]];o[p.at(-1)]=v};
 
@@ -1701,7 +1766,7 @@ let M=null,C=null,S=null,ADV=null,SHEETS=null,curSheet=0,dirty3d=true;
 let timer=null;
 function schedule(structural){clearTimeout(timer);timer=setTimeout(()=>{rebuild();if(structural){renderOps();renderIW();renderBlocks()}renderRooms()},structural?0:220)}
 function rebuild(){
-  try{if(enforceTech(P).includes('lumber'))mapToDb();({M,C}=buildFull(P));S=spec(M,C);ADV=advice(M,C,S)}catch(e){console.error(e);return}
+  try{if(enforceTech(P).includes('lumber'))mapToDb();({M,C}=buildFull(P));S=spec(M,C);S.fin=finishCalc(M);ADV=advice(M,C,S)}catch(e){console.error(e);return}
   pushHistory();
   SHEETS=null; dirty3d=true; saveP();
   renderTop(); renderSums(); renderOpsErrors(); renderRooms(); renderActive();
@@ -1718,6 +1783,7 @@ function renderTop(){
     ...(M.mans&&M.mansOk?[['Мансарда, h≥1,5 м',fmt(M.mansArea,1)+' м²']]:[]),
     ['Свай',M.piles.length+' шт'],
     ['Материалы ≈',rub(S.total)],
+    ['Отделка ≈',rub(S.fin.total)],
     ['Расчёт',nb?`${nb} не проходит`:`${C.checks.length} из ${C.checks.length} ✓`,nb?'bad':'ok']
   ].map(([a,b,c])=>`<div class="kpi ${c||''}"><small>${a}</small><b>${b}</b></div>`).join('');
   const t=$('#tabs').querySelector('[data-t="adv"] .cnt'); if(t){const nbad=ADV.filter(a=>a.lvl==='bad').length;t.textContent=nbad||nw||'✓';t.className='cnt'+(nbad?' bad':nw?' warn':'')}
@@ -2021,7 +2087,8 @@ function plProps(){const box=$('#plProps');if(!box)return;const s=PL.sel,num=(f,
   else if(s.k==='furn'){const f=P.furn[s.i];if(!f){PL.sel=null;return plProps()}h=`<h3>${esc(FURN[f.t]?.n||'Предмет')}</h3>${num('w','Ширина',f.w,'мм',10)}${num('d','Глубина',f.d,'мм',10)}${num('h','Высота',f.h,'мм',10)}${num('e','Низ от пола',f.e,'мм',10)}
     <div class="btns"><button class="btn sm" id="plRot">Повернуть на 90° (R)</button></div>`}
   else if(s.k==='room'){const r=M.rooms[s.i];if(!r){PL.sel=null;return plProps()}h=`<h3>Помещение ${r.no}</h3><label class="pl-f"><span>Название</span><input type="text" data-f="name" value="${esc(r.name)}"></label>
-    <label class="pl-f"><span>Назначение</span><select data-f="kind">${Object.entries(ROOM_KIND).map(([k,l])=>`<option value="${k}"${r.kind===k?' selected':''}>${l}</option>`).join('')}</select></label><p class="pl-sum">Площадь ${fmt(r.area,1)} м²${Math.abs((r.x1-r.x0)*(r.y1-r.y0)/1e6-r.area)<.05?` · ${fmt((r.x1-r.x0)/1000,2)} × ${fmt((r.y1-r.y0)/1000,2)} м · периметр ${fmt(2*((r.x1-r.x0)+(r.y1-r.y0))/1000,2)} м`:''}<br>Мебели внутри: ${(P.furn||[]).filter(f=>r.cells.some(c=>f.x>c[0]&&f.x<c[2]&&f.y>c[1]&&f.y<c[3])).length}</p>`}
+    <label class="pl-f"><span>Назначение</span><select data-f="kind">${Object.entries(ROOM_KIND).map(([k,l])=>`<option value="${k}"${r.kind===k?' selected':''}>${l}</option>`).join('')}</select></label>
+    ${(()=>{const fr=S.fin?.rooms[s.i],q=r.ref>=0?P.rooms[r.ref]:{};return [['wallF','wall','Стены'],['floorF','floor','Пол'],['ceilF','ceil','Потолок']].map(([f,t,l])=>`<label class="pl-f"><span>${l}</span><select data-f="${f}"><option value="">авто: ${esc(FIN[t][fr?.f[t]]?.n||'')}</option>${finOpts(t).map(([k,n])=>`<option value="${k}"${q?.[f]===k?' selected':''}>${esc(n)}</option>`).join('')}</select></label>`).join('')+(fr?`<p class="pl-sum">Стены ${fmt(fr.net,1)} м² (за вычетом проёмов ${fmt(fr.opA,1)} м²) · отделка ≈ ${rub(fr.sum)}</p>`:'')})()}<p class="pl-sum">Площадь ${fmt(r.area,1)} м²${Math.abs((r.x1-r.x0)*(r.y1-r.y0)/1e6-r.area)<.05?` · ${fmt((r.x1-r.x0)/1000,2)} × ${fmt((r.y1-r.y0)/1000,2)} м · периметр ${fmt(2*((r.x1-r.x0)+(r.y1-r.y0))/1000,2)} м`:''}<br>Мебели внутри: ${(P.furn||[]).filter(f=>r.cells.some(c=>f.x>c[0]&&f.x<c[2]&&f.y>c[1]&&f.y<c[3])).length}</p>`}
   if(s)h+=`<div class="btns"><button class="btn sm" id="plDesel">Готово</button>${s.k!=='ext'?'<button class="btn sm danger" id="plDel">Удалить</button>':''}</div>`;
   box.innerHTML=h;
   box.querySelectorAll('[data-f]').forEach(inp=>inp.onchange=()=>{const f=inp.dataset.f,val=inp.type==='checkbox'?inp.checked:inp.type==='number'?+inp.value:inp.value;
@@ -2089,8 +2156,8 @@ function planarGeo(pts,holes=[]){const n=[0,0,0];pts.forEach((p,i)=>{const q=pts
 function clipZ(pts,z0){const out=[];pts.forEach((p,i)=>{const q=pts[(i+1)%pts.length],pin=p[2]>=z0-.5,qin=q[2]>=z0-.5;if(pin)out.push(p);if(pin!==qin){const t=(z0-p[2])/(q[2]-p[2]);out.push([p[0]+(q[0]-p[0])*t,p[1]+(q[1]-p[1])*t,z0])}});return out}
 function buildHouse3D(){
   const G={};['arWalls','arRoof','arPart','arFurn','arFloor'].forEach(k=>{const g=new THREE.Group();g.name=k;G[k]=g;R3.root.add(g);R3.groups[k]=g});
-  const mWall=mat3('arW',0xEFE7D8),mPart=mat3('arP',0xF7F4EE),mRoof=mat3('arR',0x5E6B78,{side:THREE.DoubleSide}),mEdge=mat3('arE',0x47525d,{side:THREE.DoubleSide}),
-    mGlass=mat3('arG',0x9cc3e0,{transparent:true,opacity:.45}),mDoor=mat3('arD',0x8a5a33),mGab=mat3('arGb',0xEFE7D8,{side:THREE.DoubleSide});
+  const mWall=mat3('arW'+(P.finFacade||''),FIN.facade[P.finFacade]?.col||0xEFE7D8),mPart=mat3('arP',0xF7F4EE),mRoof=mat3('arR',0x5E6B78,{side:THREE.DoubleSide}),mEdge=mat3('arE',0x47525d,{side:THREE.DoubleSide}),
+    mGlass=mat3('arG',0x9cc3e0,{transparent:true,opacity:.45}),mDoor=mat3('arD',0x8a5a33),mGab=mat3('arGb'+(P.finFacade||''),FIN.facade[P.finFacade]?.col||0xEFE7D8,{side:THREE.DoubleSide});
   const z0=M.z0,zTop=M.zr0,box=(grp,mt,x0,y0,z1,x1,y1,z2,info)=>{if(x1-x0<1||y1-y0<1||z2-z1<1)return;const m=new THREE.Mesh(boxGeo(x1-x0,y1-y0,z2-z1),mt);m.position.set((x0+x1)/2,(y0+y1)/2,(z1+z2)/2);m.userData.m={ar:info};grp.add(m)};
   /* стены: сплошные участки, под окнами и над проёмами; наружные — от низа ростверка до верха перекрытия */
   M.walls.filter(w=>w.zb==null).forEach(w=>{const ext=w.ext,grp=ext?G.arWalls:G.arPart,mt=ext?mWall:mPart,zb=ext?M.H0:z0,zt=ext?zTop:M.zt,info=w.name;
@@ -2109,7 +2176,7 @@ function buildHouse3D(){
   F.filter(f=>f.k==='roof'||f.k==='edge').forEach(f=>{const m=new THREE.Mesh(planarGeo(f.pts),f.k==='roof'?mRoof:mEdge);m.userData.m={ar:'Кровля: '+M.mat.name.toLowerCase()};G.arRoof.add(m)});
   /* полы помещений */
   const fc={living:0xD8C29C,aux:0xCDBFA8,tech:0xBDB6AA};
-  (M.rooms||[]).forEach(r=>r.cells.forEach(c=>box(G.arFloor,mat3('arF'+r.kind,fc[r.kind]||0xCDBFA8),c[0],c[1],z0-30,c[2],c[3],z0,`${r.name}, ${fmt(r.area,1)} м²`)));
+  (M.rooms||[]).forEach(r=>r.cells.forEach(c=>{const fk=roomFin(r).floor;box(G.arFloor,mat3('arF'+fk,FIN.floor[fk]?.col||fc[r.kind]||0xCDBFA8),c[0],c[1],z0-30,c[2],c[3],z0,`${r.name}, ${fmt(r.area,1)} м² · пол: ${FIN.floor[fk]?.n||''}`)}));
   /* мебель и оборудование */
   (P.furn||[]).forEach(f=>{const c=FURN[f.t];if(!c)return;const [x0,y0,x1,y1]=furnFoot(f),e=+f.e||0;box(G.arFurn,mat3('arM'+c.cat,FURN_COL[c.cat]),x0,y0,z0+e,x1,y1,z0+e+(+f.h||500),c.n+` ${f.w}×${f.d}×${f.h}`)});
 }
@@ -2377,6 +2444,13 @@ function sheetFacades(code){
     mk.forEach(([z,t],j)=>{const y=Z(z);g+=Ln(xm,y,X(v.u0)-1,y)+elev(xm,y,elvTxt(z-M.z0),false)+Tx(xm-1.6,y+2.6,t,{a:'end',size:1.9})})});
   const ow=M.ops.filter(o=>o.ok).length;
   return {code,title:'Фасады',sub:`4 вида, проёмов ${ow}; кровля — ${M.mat.name.toLowerCase()}`,scale:s,body:g}}
+/* ведомость отделки помещений (по форме ГОСТ 21.501: потолок, стены, низ стен/пол) */
+function sheetFinish(code){const F=S.fin||finishCalc(M);let g=Tx(25+385/2,16,'Ведомость отделки помещений',{size:3.5,cls:'b'});
+  const rows=F.rooms.map(r=>[r.no,r.name,FIN.ceil[r.f.ceil].n,fmt(r.area,1),FIN.wall[r.f.wall].n,fmt(r.net,1),FIN.floor[r.f.floor].n,fmt(r.area,1)]);
+  g+=tableBlock(25,28,385,200,'Внутренняя отделка',[{t:'№',w:9},{t:'Наименование помещения',w:44,a:'start'},{t:'Потолок',w:62,a:'start'},{t:'м²',w:13},{t:'Стены и перегородки',w:68,a:'start'},{t:'м²',w:13},{t:'Пол',w:56,a:'start'},{t:'м²',w:13}],rows);
+  const y=28+5.2+rows.length*4+14;g+=tableBlock(25,y,200,30,'Наружная отделка',[{t:'Элемент',w:40,a:'start'},{t:'Отделка',w:70,a:'start'},{t:'Площадь, м²',w:24},{t:'Проёмы, м²',w:24}],[['Стены и фронтоны',FIN.facade[F.facade.key].n,fmt(F.facade.net,1),fmt(F.facade.op,1)]]);
+  ['Площади стен — периметр помещения × высота до потолка минус оконные и дверные проёмы.','Плитка в санузлах — на всю высоту стен по гидроизоляции; в остальных помещениях — по ведомости.','Площадь фасада — от низа ростверка до кровли, включая фронтоны, за вычетом проёмов.'].forEach((t,i)=>g+=Tx(25,y+30+i*4.2,t,{a:'start',size:2.2}));
+  return {code,title:'Ведомость отделки',sub:`Помещений ${F.rooms.length}; фасад ${fmt(F.facade.net,1)} м², ${FIN.facade[F.facade.key].n.toLowerCase()}`,scale:'—',body:g}}
 function sheetRoofPlan(code){
   const {A,B,ov,og,tn}=M,WR=M.wingRoofs||[];
   const WP=WR.flatMap(r=>r.polys.flatMap(q=>q.pl)),xmin=Math.min(-og,...WP.map(p=>p[0])),ymin=Math.min(-ov,...WP.map(p=>p[1])),xmax=Math.max(A+og,...WP.map(p=>p[0])),ymax=Math.max(B+ov,...WP.map(p=>p[1]));
@@ -2441,12 +2515,13 @@ function sheetRoof(){
   g+=Rc(Xs(0),Zs(M.zt+M.ha),B/s,M.ha/s,'w');
   if(M.mans&&M.mansOk){g+=Rc(Xs(0),Zs(M.zm),B/s,(M.zm-M.zt-M.ha)/s,'w2');[M.yk,B-M.yk].forEach(y=>g+=Rc(Xs(y-M.kneeD/2),Zs(M.zm+M.kneeH),M.kneeD/s,M.kneeH/s,'wlp'));
     g+=Rc(Xs(M.yT),Zs(M.zc+150),(B-2*M.yT)/s,150/s,'w3');g+=Tx(Xs(B/2),Zs(M.zm+M.mansH/2),'МАНСАРДА',{size:3,cls:'b'})}
-  M.slopes.forEach(sl=>{const ze=sl.zA,zr=sl.zB,yy=sl.y1,o=hr/cs;g+=Pg([[Xs(sl.y0),Zs(ze)],[Xs(yy),Zs(zr)],[Xs(yy),Zs(zr+o)],[Xs(sl.y0),Zs(ze+o)]],'w2');
+  const ex=M.ridgeExt||0;M.slopes.forEach(sl=>{const ze=sl.zA,yy=sl.y1+sl.dir*ex*cs,zr=sl.zB+ex*M.sn,o=hr/cs;g+=Pg([[Xs(sl.y0),Zs(ze)],[Xs(yy),Zs(zr)],[Xs(yy),Zs(zr+o)],[Xs(sl.y0),Zs(ze+o)]],'w2');
     const ofr=(hr+(M.mat.counter?M.mat.counter[0]:0)+M.mat.lath[0]+8)/cs;g+=Ln(Xs(sl.y0),Zs(ze+ofr),Xs(yy),Zs(zr+ofr),'m')});
   if(M.purlin){const pu=M.pur;g+=Rc(Xs(B/2-pu.pb/2),Zs(pu.zPt),pu.pb/s,pu.ph/s,'w3')+Rc(Xs(B/2-pu.qh/2),Zs(pu.zPt-pu.ph),pu.qh/s,pu.Lpost/s,'w2')+Rc(Xs(B/2-pu.qh/2),Zs(M.zt+M.ha+pu.qb),pu.qh/s,pu.qb/s,'w2');
     if(pu.nC){const zc=M.zt+M.ha+pu.qb+pu.Lpost*.6,yC=(zc-M.zr0)/M.tn;g+=Rc(Xs(yC),Zs(zc+pu.cs2[1]/2),(B-2*yC)/s,pu.cs2[1]/s,'w2')+Tx(Xs(B/2)-pu.qh/2/s-1.5,Zs(zc)-1.6,`СХ ${pu.cs2.join('×')}`,{a:'end',size:2.1})}
     g+=Ln(Xs(B/2)+pu.pb/2/s,Zs(pu.zPt-pu.ph/2),Xs(B/2)+pu.pb/2/s+14,Zs(pu.zPt-pu.ph/2)-6)+Tx(Xs(B/2)+pu.pb/2/s+15,Zs(pu.zPt-pu.ph/2)-6.6,`КП ${pu.pb}×${pu.ph}, врубка ${R(pu.notch)}`,{a:'start',size:2.1})+Tx(Xs(B/2)+pu.qh/2/s+1.5,Zs(pu.zPt-pu.ph-pu.Lpost/2),`СТК ${pu.qb}×${pu.qh}`,{a:'start',size:2.1})}
-  else if(M.gable)g+=Rc(Xs(B/2-br/2),Zs(M.zRidge),br/s,hr/s,'w3');
+  else if(M.gable&&M.ridgeJoint!=='lap')g+=Rc(Xs(B/2-br/2),Zs(M.zRidge),br/s,hr/s,'w3');
+  if(M.gable){const zk=M.zr0+B/2*M.tn+hr/cs/2;if(M.ridgeJoint==='lap')g+=Ci(Xs(B/2),Zs(zk),Math.max(.6,6/s),'m');g+=Ln(Xs(B/2)-2,Zs(zk),Xs(B/2)-16,Zs(zk)-9)+Tx(Xs(B/2)-17,Zs(zk)-9.6,M.ridgeJoint==='lap'?`конёк: внахлёст, заход ${M.ridgeExt}, болт М12`:'конёк: в стык с подрезкой, накладки',{a:'end',size:2.1})}
   M.strutY.forEach(y=>g+=Rc(Xs(y-br/2),Zs(M.zU(y)),br/s,(M.zU(y)-M.zr0)/s,'w3'));
   const a0=Xs(0)+(M.gable?14:16),z0p=Zs(M.zr0);g+=`<path d="M${f2(Xs(0)+12)} ${f2(z0p)} A12 12 0 0 0 ${f2(Xs(0)+12*Math.cos(M.al))} ${f2(z0p-12*Math.sin(M.al))}" class="t"/>`+Ln(Xs(0),z0p,Xs(0)+15,z0p)+Tx(a0+1,z0p-2,`${M.deg}°`,{size:2.4,a:'start'});
   g+=chainH([-ov,0,B,B+ov],Xs,Zs(zMin)+7,null);g+=chainH([0,...M.lines.filter(l=>l.axis==='x'&&l.wing==null).map(l=>l.c),B],Xs,Zs(zMin)+15,null);
@@ -2482,7 +2557,7 @@ function sheetGeneral(list){
   return {code:'ОД',title:'Общие данные',sub:`Технология: ${T.short}`,scale:'—',body:g};
 }
 function makeSheets(){
-  const mo=M.mans&&M.mansOk,list=[sheetPlan(),...(mo?[sheetMans()]:[]),sheetRoofPlan(mo?'АР-3':'АР-2'),sheetFacades(mo?'АР-4':'АР-3'),sheetPiles(),sheetGrill()];let k=1;
+  const mo=M.mans&&M.mansOk,list=[sheetPlan(),...(mo?[sheetMans()]:[]),sheetRoofPlan(mo?'АР-3':'АР-2'),sheetFacades(mo?'АР-4':'АР-3'),sheetFinish(mo?'АР-5':'АР-4'),sheetPiles(),sheetGrill()];let k=1;
   M.walls.forEach(wl=>list.push(sheetWall(wl,'КД-'+(k++))));
   list.push(sheetRoof());
   list.unshift(sheetGeneral([{code:'ОД',title:'Общие данные'},...list]));
@@ -2568,6 +2643,7 @@ async function exportXlsx(test){
   add('Смета',[['Раздел','Позиция','Ед.','Кол-во','Цена, ₽','Сумма, ₽'],['Пиломатериал','Пиломатериал по ведомости раскроя (цены из базы)','м³',+S.woodVol.toFixed(3),'',Math.round(S.woodSum)],...S.mats.map(m=>[m.grp,m.name,m.unit,+(+m.qty).toFixed(2),m.price,Math.round(m.sum)]),['','Итого материалы и сваи','','','',Math.round(S.total)]],[14,64,8,10,10,12]);
   add('Сваи',[['№','X, мм','Y, мм','Нагрузка расч., кН','Постоянная норм., кН'],...M.piles.map(p=>[p.no,Math.round(p.x),Math.round(p.y),+p.N.toFixed(1),+p.Ng.toFixed(1)])],[6,10,10,18,20]);
   add('Проверки',[['Элемент','Сечение','Условия','Использование, %','Результат'],...C.checks.map(c=>[c.title,c.sec,c.meta,Number.isFinite(c.u)?Math.round(c.u*100):'∞',c.ok?'проходит':'НЕ ПРОХОДИТ'])],[36,16,64,16,14]);
+  add('Отделка',[['№','Помещение','Пол, м²','Пол','Стены нетто, м²','Стены','Потолок','Сумма, ₽'],...S.fin.rooms.map(r=>[r.no,r.name,+r.area.toFixed(1),FIN.floor[r.f.floor].n,+r.net.toFixed(1),FIN.wall[r.f.wall].n,FIN.ceil[r.f.ceil].n,Math.round(r.sum)]),['','Фасад','','',+S.fin.facade.net.toFixed(1),FIN.facade[S.fin.facade.key].n,'',Math.round(S.fin.facade.sum)],[],['Материал','Ед.','Кол-во','Цена','Сумма'],...S.fin.items.map(m=>[m.name,m.unit,+m.qty.toFixed(1),m.price,Math.round(m.sum)])],[5,30,9,32,10,34,30,12]);
   add('Проёмы',[['Марка','Стена','Тип','Отступ, мм','Ширина, мм','Высота, мм','Низ, мм'],...M.ops.filter(o=>o.ok).map(o=>[o.mark,o.wall,o.type==='door'?'дверь':'окно',o.x,o.w,o.h,o.sill])],[8,8,8,11,11,11,9]);
   const buf=X.write(wb,{bookType:'xlsx',type:'array'});
   if(test)return buf;
@@ -2591,6 +2667,12 @@ function buyTable(){
   let h=`<table class="t"><thead><tr><th>Сечение</th><th>Материал</th><th>Купить досок</th><th class="n">Всего, м</th><th class="n">Отход</th><th class="n">Объём, м³</th><th class="n">Цена, ₽/м³</th><th class="n">Сумма</th></tr></thead><tbody>`;
   S.cuts.forEach(c=>h+=`<tr><td class="num">${c.key}</td><td>${esc(c.kind)}</td><td class="num">${Object.entries(c.buy).sort((a,b)=>b[0]-a[0]).map(([L,q])=>`${L} мм × ${q}`).join(' · ')}</td><td class="n">${fmt(c.total/1000,1)}</td><td class="n">${fmt(c.waste*100,1)} %</td><td class="n">${fmt(c.vol,3)}</td><td class="n">${fmt(c.price)}</td><td class="n">${rub(c.cost)}</td></tr>`);
   h+=`<tr class="tot"><td colspan="5">Пиломатериал к закупке (цены — из базы материалов)</td><td class="n">${fmt(S.woodVol,2)}</td><td></td><td class="n">${rub(S.woodSum)}</td></tr></tbody></table>`;return h}
+function finTable(){const F=S.fin;let h=`<table class="t"><thead><tr><th>№</th><th>Помещение</th><th class="n">Пол, м²</th><th>Пол</th><th class="n">Стены, м²</th><th>Стены</th><th>Потолок</th><th class="n">Сумма</th></tr></thead><tbody>`;
+  F.rooms.forEach(r=>h+=`<tr><td class="num">${r.no}</td><td>${esc(r.name)}</td><td class="n">${fmt(r.area,1)}</td><td>${esc(FIN.floor[r.f.floor].n)}</td><td class="n">${fmt(r.net,1)}</td><td>${esc(FIN.wall[r.f.wall].n)}</td><td>${esc(FIN.ceil[r.f.ceil].n)}</td><td class="n">${rub(r.sum)}</td></tr>`);
+  h+=`<tr><td></td><td>Фасад</td><td></td><td></td><td class="n">${fmt(F.facade.net,1)}</td><td>${esc(FIN.facade[F.facade.key].n)}</td><td></td><td class="n">${rub(F.facade.sum)}</td></tr><tr class="tot"><td colspan="7">Итого отделка (материалы)</td><td class="n">${rub(F.total)}</td></tr></tbody></table>`;return h}
+function finMatsTable(){const G={wall:'Стены',floor:'Пол',ceil:'Потолок',facade:'Фасад'};let h=`<table class="t"><thead><tr><th>Материал отделки</th><th>Ед.</th><th class="n">Кол-во</th><th class="n">Цена</th><th class="n">Сумма</th></tr></thead><tbody>`,last='';
+  [...S.fin.items].sort((a,b)=>Object.keys(G).indexOf(a.grp)-Object.keys(G).indexOf(b.grp)).forEach(m=>{if(m.grp!==last){h+=`<tr class="g"><td colspan="5">${G[m.grp]}</td></tr>`;last=m.grp}h+=`<tr><td>${esc(m.name)}</td><td>${m.unit}</td><td class="n">${fmt(m.qty,m.unit==='шт'?0:1)}</td><td class="n">${fmt(m.price)}</td><td class="n">${rub(m.sum)}</td></tr>`});
+  return h+`<tr class="tot"><td colspan="4">Итого</td><td class="n">${rub(S.fin.total)}</td></tr></tbody></table>`}
 function matsTable(){
   let h=`<table class="t"><thead><tr><th>Материал</th><th>Ед.</th><th class="n">Кол-во</th><th class="n">Цена</th><th class="n">Сумма</th></tr></thead><tbody>`;let last='';
   S.mats.forEach(m=>{if(m.grp!==last){h+=`<tr class="g"><td colspan="5">${m.grp}</td></tr>`;last=m.grp}h+=`<tr><td>${esc(m.name)}</td><td>${m.unit}</td><td class="n">${fmt(m.qty,m.d||0)}</td><td class="n">${fmt(m.price)}</td><td class="n">${rub(m.sum)}</td></tr>`});
@@ -2606,7 +2688,10 @@ function renderSpec(){
   <div class="sec-head" style="margin-top:22px"><h2>Закупка и смета</h2><div class="btns"><button class="btn sm" id="cpMats">Копировать для Excel</button></div></div>
   <p class="lead">Количество досок — по результату раскроя. Площади: стены нетто ${fmt(a.wallNet,1)} м², фронтоны ${fmt(a.gabA,1)} м², пол ${fmt(a.floorA,1)} м², скаты ${fmt(a.roofA,1)} м², проёмы ${fmt(a.opsA,1)} м².</p>
   <div class="tw">${buyTable()}</div><div style="height:12px"></div><div class="tw">${matsTable()}</div>
-  <p class="note">Смета не включает окна, двери, фасад, внутреннюю отделку, инженерные сети и работу бригады (кроме монтажа свай).</p>`;
+  <p class="note">Смета не включает окна, двери, инженерные сети и работу бригады (кроме монтажа свай). Отделка — отдельно ниже.</p>
+  <div class="sec-head" style="margin-top:22px"><h2>Отделка помещений и фасада</h2></div>
+  <p class="lead">Площади стен — периметр помещения × высота ${M.H} мм минус окна и двери. Вид отделки комнаты меняется на плане (нажмите на помещение), по умолчанию — в разделе «АР · Отделка».</p>
+  <div class="tw">${finTable()}</div><div style="height:12px"></div><div class="tw">${finMatsTable()}</div>`;
   $('#cpSpec').onclick=e=>copyBtn(e.target,tsvSpec());if(canSave())$('#xlsDl').onclick=()=>runExport(()=>exportXlsx(),'#specMsg','Файл Excel сохранён: спецификация, закупка, раскрой, смета, сваи, проверки, проёмы.');$('#cpMats').onclick=e=>copyBtn(e.target,tsvMats());
 }
 function renderCut(){

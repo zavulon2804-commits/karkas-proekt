@@ -1,5 +1,5 @@
 function makeSheets(){
-  const mo=M.mans&&M.mansOk,list=[sheetPlan(),...(mo?[sheetMans()]:[]),sheetRoofPlan(mo?'АР-3':'АР-2'),sheetFacades(mo?'АР-4':'АР-3'),sheetPiles(),sheetGrill()];let k=1;
+  const mo=M.mans&&M.mansOk,list=[sheetPlan(),...(mo?[sheetMans()]:[]),sheetRoofPlan(mo?'АР-3':'АР-2'),sheetFacades(mo?'АР-4':'АР-3'),sheetFinish(mo?'АР-5':'АР-4'),sheetPiles(),sheetGrill()];let k=1;
   M.walls.forEach(wl=>list.push(sheetWall(wl,'КД-'+(k++))));
   list.push(sheetRoof());
   list.unshift(sheetGeneral([{code:'ОД',title:'Общие данные'},...list]));
@@ -85,6 +85,7 @@ async function exportXlsx(test){
   add('Смета',[['Раздел','Позиция','Ед.','Кол-во','Цена, ₽','Сумма, ₽'],['Пиломатериал','Пиломатериал по ведомости раскроя (цены из базы)','м³',+S.woodVol.toFixed(3),'',Math.round(S.woodSum)],...S.mats.map(m=>[m.grp,m.name,m.unit,+(+m.qty).toFixed(2),m.price,Math.round(m.sum)]),['','Итого материалы и сваи','','','',Math.round(S.total)]],[14,64,8,10,10,12]);
   add('Сваи',[['№','X, мм','Y, мм','Нагрузка расч., кН','Постоянная норм., кН'],...M.piles.map(p=>[p.no,Math.round(p.x),Math.round(p.y),+p.N.toFixed(1),+p.Ng.toFixed(1)])],[6,10,10,18,20]);
   add('Проверки',[['Элемент','Сечение','Условия','Использование, %','Результат'],...C.checks.map(c=>[c.title,c.sec,c.meta,Number.isFinite(c.u)?Math.round(c.u*100):'∞',c.ok?'проходит':'НЕ ПРОХОДИТ'])],[36,16,64,16,14]);
+  add('Отделка',[['№','Помещение','Пол, м²','Пол','Стены нетто, м²','Стены','Потолок','Сумма, ₽'],...S.fin.rooms.map(r=>[r.no,r.name,+r.area.toFixed(1),FIN.floor[r.f.floor].n,+r.net.toFixed(1),FIN.wall[r.f.wall].n,FIN.ceil[r.f.ceil].n,Math.round(r.sum)]),['','Фасад','','',+S.fin.facade.net.toFixed(1),FIN.facade[S.fin.facade.key].n,'',Math.round(S.fin.facade.sum)],[],['Материал','Ед.','Кол-во','Цена','Сумма'],...S.fin.items.map(m=>[m.name,m.unit,+m.qty.toFixed(1),m.price,Math.round(m.sum)])],[5,30,9,32,10,34,30,12]);
   add('Проёмы',[['Марка','Стена','Тип','Отступ, мм','Ширина, мм','Высота, мм','Низ, мм'],...M.ops.filter(o=>o.ok).map(o=>[o.mark,o.wall,o.type==='door'?'дверь':'окно',o.x,o.w,o.h,o.sill])],[8,8,8,11,11,11,9]);
   const buf=X.write(wb,{bookType:'xlsx',type:'array'});
   if(test)return buf;

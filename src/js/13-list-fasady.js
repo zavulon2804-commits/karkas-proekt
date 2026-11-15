@@ -70,3 +70,10 @@ function sheetFacades(code){
     mk.forEach(([z,t],j)=>{const y=Z(z);g+=Ln(xm,y,X(v.u0)-1,y)+elev(xm,y,elvTxt(z-M.z0),false)+Tx(xm-1.6,y+2.6,t,{a:'end',size:1.9})})});
   const ow=M.ops.filter(o=>o.ok).length;
   return {code,title:'Фасады',sub:`4 вида, проёмов ${ow}; кровля — ${M.mat.name.toLowerCase()}`,scale:s,body:g}}
+/* ведомость отделки помещений (по форме ГОСТ 21.501: потолок, стены, низ стен/пол) */
+function sheetFinish(code){const F=S.fin||finishCalc(M);let g=Tx(25+385/2,16,'Ведомость отделки помещений',{size:3.5,cls:'b'});
+  const rows=F.rooms.map(r=>[r.no,r.name,FIN.ceil[r.f.ceil].n,fmt(r.area,1),FIN.wall[r.f.wall].n,fmt(r.net,1),FIN.floor[r.f.floor].n,fmt(r.area,1)]);
+  g+=tableBlock(25,28,385,200,'Внутренняя отделка',[{t:'№',w:9},{t:'Наименование помещения',w:44,a:'start'},{t:'Потолок',w:62,a:'start'},{t:'м²',w:13},{t:'Стены и перегородки',w:68,a:'start'},{t:'м²',w:13},{t:'Пол',w:56,a:'start'},{t:'м²',w:13}],rows);
+  const y=28+5.2+rows.length*4+14;g+=tableBlock(25,y,200,30,'Наружная отделка',[{t:'Элемент',w:40,a:'start'},{t:'Отделка',w:70,a:'start'},{t:'Площадь, м²',w:24},{t:'Проёмы, м²',w:24}],[['Стены и фронтоны',FIN.facade[F.facade.key].n,fmt(F.facade.net,1),fmt(F.facade.op,1)]]);
+  ['Площади стен — периметр помещения × высота до потолка минус оконные и дверные проёмы.','Плитка в санузлах — на всю высоту стен по гидроизоляции; в остальных помещениях — по ведомости.','Площадь фасада — от низа ростверка до кровли, включая фронтоны, за вычетом проёмов.'].forEach((t,i)=>g+=Tx(25,y+30+i*4.2,t,{a:'start',size:2.2}));
+  return {code,title:'Ведомость отделки',sub:`Помещений ${F.rooms.length}; фасад ${fmt(F.facade.net,1)} м², ${FIN.facade[F.facade.key].n.toLowerCase()}`,scale:'—',body:g}}

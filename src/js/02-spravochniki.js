@@ -136,13 +136,13 @@ const GRP_ORDER=Object.keys(GRP);
 /* ---------- пример проекта ---------- */
 const DEF={
   name:'Дом 9×7, двускатная крыша',
-  A:9000,B:7000,H:2800,furn:[],
+  A:9000,B:7000,H:2800,furn:[],finWall:'paint',finFloor:'laminate',finCeil:'gkl',finFacade:'imit',
   tech:'free',corner:'warm',topPlates:2,instLayer:false,windBoard:false,
   lumber:'planed',studB:45,studH:145,studS:625,partH:95,partS:600,lintelH:195,lintelPly:2,wallOsb:9,
   bracing:'sheathing',sheathMat:'osb9',nailStep:150,braceB:25,braceH:100,
   pile:'p108',pileFd:50,soil:'loam',freeze:1400,pileMaxS:2500,pileLen:'auto',plinth:500,
   beamType:'brus',beamB:150,beamH:200,packB:45,packH:195,beamPly:3,beamsMid:'auto',joistB:45,joistH:195,joistS:600,floorOsb:22,
-  roof:'gable',slope:30,roofMat:'metal',overhang:500,gableOver:400,rafterB:45,rafterH:195,rafterS:600,attB:45,attH:195,strut:false,rafterSys:'hang',purB:150,purH:200,postB:100,postH:100,postS:3000,purStruts:true,collar:true,mansard:false,kneeH:1200,mansH:2400,kneeD:95,gMans:.6,pMans:1.5,
+  roof:'gable',slope:30,roofMat:'metal',overhang:500,gableOver:400,rafterB:45,rafterH:195,rafterS:600,attB:45,attH:195,strut:false,rafterSys:'hang',ridgeJoint:'butt',purB:150,purH:200,postB:100,postH:100,postS:3000,purStruts:true,collar:true,mansard:false,kneeH:1200,mansH:2400,kneeD:95,gMans:.6,pMans:1.5,
   snow:'III',wind:'I',terrain:'B',gFloor:.5,pFloor:1.5,gAttic:.35,pAttic:.7,gWall:.5,
   stocks:'6000, 4500, 3000',kerf:4,
   prices:{wood:28000,osb9:780,osb12:980,osb22:1950,insul:4300,wind:2600,vapor:1700,roofMetal:650,roofProf:520,roofSoft:820,roofOndulin:430,pile:2900,pileWork:1300,rc20:1500,rc30:2400,rcDrive:3500,plate:450,concrete:6800,rebar:80,sleeve:120,boredWork:1800,nails:260,screws:950,bracket:65,antiseptic:160,anchor:190,ply9:1350,csp12:1150,windBoard:750},

@@ -9,6 +9,12 @@ function buyTable(){
   let h=`<table class="t"><thead><tr><th>Сечение</th><th>Материал</th><th>Купить досок</th><th class="n">Всего, м</th><th class="n">Отход</th><th class="n">Объём, м³</th><th class="n">Цена, ₽/м³</th><th class="n">Сумма</th></tr></thead><tbody>`;
   S.cuts.forEach(c=>h+=`<tr><td class="num">${c.key}</td><td>${esc(c.kind)}</td><td class="num">${Object.entries(c.buy).sort((a,b)=>b[0]-a[0]).map(([L,q])=>`${L} мм × ${q}`).join(' · ')}</td><td class="n">${fmt(c.total/1000,1)}</td><td class="n">${fmt(c.waste*100,1)} %</td><td class="n">${fmt(c.vol,3)}</td><td class="n">${fmt(c.price)}</td><td class="n">${rub(c.cost)}</td></tr>`);
   h+=`<tr class="tot"><td colspan="5">Пиломатериал к закупке (цены — из базы материалов)</td><td class="n">${fmt(S.woodVol,2)}</td><td></td><td class="n">${rub(S.woodSum)}</td></tr></tbody></table>`;return h}
+function finTable(){const F=S.fin;let h=`<table class="t"><thead><tr><th>№</th><th>Помещение</th><th class="n">Пол, м²</th><th>Пол</th><th class="n">Стены, м²</th><th>Стены</th><th>Потолок</th><th class="n">Сумма</th></tr></thead><tbody>`;
+  F.rooms.forEach(r=>h+=`<tr><td class="num">${r.no}</td><td>${esc(r.name)}</td><td class="n">${fmt(r.area,1)}</td><td>${esc(FIN.floor[r.f.floor].n)}</td><td class="n">${fmt(r.net,1)}</td><td>${esc(FIN.wall[r.f.wall].n)}</td><td>${esc(FIN.ceil[r.f.ceil].n)}</td><td class="n">${rub(r.sum)}</td></tr>`);
+  h+=`<tr><td></td><td>Фасад</td><td></td><td></td><td class="n">${fmt(F.facade.net,1)}</td><td>${esc(FIN.facade[F.facade.key].n)}</td><td></td><td class="n">${rub(F.facade.sum)}</td></tr><tr class="tot"><td colspan="7">Итого отделка (материалы)</td><td class="n">${rub(F.total)}</td></tr></tbody></table>`;return h}
+function finMatsTable(){const G={wall:'Стены',floor:'Пол',ceil:'Потолок',facade:'Фасад'};let h=`<table class="t"><thead><tr><th>Материал отделки</th><th>Ед.</th><th class="n">Кол-во</th><th class="n">Цена</th><th class="n">Сумма</th></tr></thead><tbody>`,last='';
+  [...S.fin.items].sort((a,b)=>Object.keys(G).indexOf(a.grp)-Object.keys(G).indexOf(b.grp)).forEach(m=>{if(m.grp!==last){h+=`<tr class="g"><td colspan="5">${G[m.grp]}</td></tr>`;last=m.grp}h+=`<tr><td>${esc(m.name)}</td><td>${m.unit}</td><td class="n">${fmt(m.qty,m.unit==='шт'?0:1)}</td><td class="n">${fmt(m.price)}</td><td class="n">${rub(m.sum)}</td></tr>`});
+  return h+`<tr class="tot"><td colspan="4">Итого</td><td class="n">${rub(S.fin.total)}</td></tr></tbody></table>`}
 function matsTable(){
   let h=`<table class="t"><thead><tr><th>Материал</th><th>Ед.</th><th class="n">Кол-во</th><th class="n">Цена</th><th class="n">Сумма</th></tr></thead><tbody>`;let last='';
   S.mats.forEach(m=>{if(m.grp!==last){h+=`<tr class="g"><td colspan="5">${m.grp}</td></tr>`;last=m.grp}h+=`<tr><td>${esc(m.name)}</td><td>${m.unit}</td><td class="n">${fmt(m.qty,m.d||0)}</td><td class="n">${fmt(m.price)}</td><td class="n">${rub(m.sum)}</td></tr>`});
@@ -24,7 +30,10 @@ function renderSpec(){
   <div class="sec-head" style="margin-top:22px"><h2>Закупка и смета</h2><div class="btns"><button class="btn sm" id="cpMats">Копировать для Excel</button></div></div>
   <p class="lead">Количество досок — по результату раскроя. Площади: стены нетто ${fmt(a.wallNet,1)} м², фронтоны ${fmt(a.gabA,1)} м², пол ${fmt(a.floorA,1)} м², скаты ${fmt(a.roofA,1)} м², проёмы ${fmt(a.opsA,1)} м².</p>
   <div class="tw">${buyTable()}</div><div style="height:12px"></div><div class="tw">${matsTable()}</div>
-  <p class="note">Смета не включает окна, двери, фасад, внутреннюю отделку, инженерные сети и работу бригады (кроме монтажа свай).</p>`;
+  <p class="note">Смета не включает окна, двери, инженерные сети и работу бригады (кроме монтажа свай). Отделка — отдельно ниже.</p>
+  <div class="sec-head" style="margin-top:22px"><h2>Отделка помещений и фасада</h2></div>
+  <p class="lead">Площади стен — периметр помещения × высота ${M.H} мм минус окна и двери. Вид отделки комнаты меняется на плане (нажмите на помещение), по умолчанию — в разделе «АР · Отделка».</p>
+  <div class="tw">${finTable()}</div><div style="height:12px"></div><div class="tw">${finMatsTable()}</div>`;
   $('#cpSpec').onclick=e=>copyBtn(e.target,tsvSpec());if(canSave())$('#xlsDl').onclick=()=>runExport(()=>exportXlsx(),'#specMsg','Файл Excel сохранён: спецификация, закупка, раскрой, смета, сваи, проверки, проёмы.');$('#cpMats').onclick=e=>copyBtn(e.target,tsvMats());
 }
 function renderCut(){

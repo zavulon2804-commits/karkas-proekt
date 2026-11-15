@@ -33,6 +33,8 @@ const FORM=[
   {id:'iw',t:'АР · Перегородки',custom:'iw'},
   {id:'blocks',t:'АР · Крылья дома (Г-, Т-, П-образный план)',custom:'blocks'},
   {id:'rooms',t:'АР · Помещения',custom:'rooms'},
+  {id:'fin',t:'АР · Отделка',f:[{k:'finFacade',l:'Фасад',type:'sel',opts:finOpts('facade'),wide:true},{k:'finWall',l:'Стены помещений (по умолчанию)',type:'sel',opts:finOpts('wall'),wide:true},{k:'finFloor',l:'Пол (по умолчанию)',type:'sel',opts:finOpts('floor'),wide:true},{k:'finCeil',l:'Потолок (по умолчанию)',type:'sel',opts:finOpts('ceil'),wide:true},
+    {hint:'Санузлам и ванным плитка назначается сама (по названию помещения); котельной, кухне и прихожей — керамогранит на пол. Отделку отдельной комнаты меняйте на плане: нажмите на помещение.'}]},
   {id:'found',t:'КР · Фундамент и пол',f:[
     {k:'pile',l:'Свая',type:'sel',opts:opt(PILES),wide:true},
     {k:'pileFd',l:'Несущая способность сваи',u:'кН',min:5,max:300,step:1,show:()=>P.pile==='manual'},
@@ -60,6 +62,7 @@ const FORM=[
     {k:'rafterS',l:'Шаг стропил',u:'мм',min:300,max:1200,step:5},
     {k:'attSec',l:'Балка перекрытия',type:'sec',keys:['attB','attH'],rows:()=>frameRows(r=>r.b>=40&&r.h>=120)},
     {k:'rafterSys',l:'Стропильная система',type:'sel',opts:[['hang','Висячая — балки перекрытия работают затяжками'],['purlin','Наслонная — коньковый прогон на стойках']],wide:true,show:()=>!P.mansard&&P.roof!=='shed'},
+    {k:'ridgeJoint',l:'Стропила на коньке',type:'sel',opts:[['butt','В стык с подрезкой — торцы запилены по уклону'],['lap','Внахлёст — стропила рядом, стянуты болтом']],wide:true,show:()=>P.roof!=='shed'},
     {k:'purSec',l:'Коньковый прогон (брус)',type:'sec',keys:['purB','purH'],rows:()=>dbRows('beam'),show:()=>P.rafterSys==='purlin'&&!P.mansard&&P.roof!=='shed'},
     {k:'postSec',l:'Стойка и лежень (брус)',type:'sec',keys:['postB','postH'],rows:()=>dbRows('beam'),show:()=>P.rafterSys==='purlin'&&!P.mansard&&P.roof!=='shed'},
     {k:'postS',l:'Шаг стоек прогона',u:'мм',min:1500,max:6000,step:100,show:()=>P.rafterSys==='purlin'&&!P.mansard&&P.roof!=='shed'},
@@ -104,7 +107,7 @@ const FORM=[
     {hint:'Цены примерные — впишите свои из прайса поставщика.'}]},
   {id:'file',t:'Файл проекта',custom:'file'}
 ];
-const F_ORDER=['site','loads','house','blocks','iw','ops','rooms','roof','found','walls','cutp','prices','file'];FORM.sort((a,c)=>F_ORDER.indexOf(a.id)-F_ORDER.indexOf(c.id));
+const F_ORDER=['site','loads','house','blocks','iw','ops','rooms','fin','roof','found','walls','cutp','prices','file'];FORM.sort((a,c)=>F_ORDER.indexOf(a.id)-F_ORDER.indexOf(c.id));
 const getK=k=>k.split('.').reduce((o,x)=>o?.[x],P);
 const setK=(k,v)=>{const p=k.split('.');let o=P;for(let i=0;i<p.length-1;i++)o=o[p[i]];o[p.at(-1)]=v};
 
@@ -289,7 +292,7 @@ let M=null,C=null,S=null,ADV=null,SHEETS=null,curSheet=0,dirty3d=true;
 let timer=null;
 function schedule(structural){clearTimeout(timer);timer=setTimeout(()=>{rebuild();if(structural){renderOps();renderIW();renderBlocks()}renderRooms()},structural?0:220)}
 function rebuild(){
-  try{if(enforceTech(P).includes('lumber'))mapToDb();({M,C}=buildFull(P));S=spec(M,C);ADV=advice(M,C,S)}catch(e){console.error(e);return}
+  try{if(enforceTech(P).includes('lumber'))mapToDb();({M,C}=buildFull(P));S=spec(M,C);S.fin=finishCalc(M);ADV=advice(M,C,S)}catch(e){console.error(e);return}
   pushHistory();
   SHEETS=null; dirty3d=true; saveP();
   renderTop(); renderSums(); renderOpsErrors(); renderRooms(); renderActive();
@@ -306,6 +309,7 @@ function renderTop(){
     ...(M.mans&&M.mansOk?[['Мансарда, h≥1,5 м',fmt(M.mansArea,1)+' м²']]:[]),
     ['Свай',M.piles.length+' шт'],
     ['Материалы ≈',rub(S.total)],
+    ['Отделка ≈',rub(S.fin.total)],
     ['Расчёт',nb?`${nb} не проходит`:`${C.checks.length} из ${C.checks.length} ✓`,nb?'bad':'ok']
   ].map(([a,b,c])=>`<div class="kpi ${c||''}"><small>${a}</small><b>${b}</b></div>`).join('');
   const t=$('#tabs').querySelector('[data-t="adv"] .cnt'); if(t){const nbad=ADV.filter(a=>a.lvl==='bad').length;t.textContent=nbad||nw||'✓';t.className='cnt'+(nbad?' bad':nw?' warn':'')}
