@@ -1659,7 +1659,10 @@ function chainV(vals,Y,x,xref){const v=[...new Set(vals.map(a=>R(a)))].sort((a,c
 const elvTxt=v=>{const m=v/1000;return Math.abs(m)<.0005?'±0,000':(m>0?'+':'−')+Math.abs(m).toFixed(3).replace('.',',')};
 function elev(x,y,label,right=true){const d=right?1:-1;return Pg([[x,y],[x-1.3,y-2.2],[x+1.3,y-2.2]],'t')+Ln(x,y-2.2,x+d*15,y-2.2)+Tx(x+d*1.6,y-3,label,{a:right?'start':'end',size:2.2})}
 function bubble(x,y,l){return Ci(x,y,3.6,'t')+Tx(x,y+1,l,{size:3})}
-const AX_LET='АБВГДЕЖИКЛМНПРСТУФЦШЭЮЯ';
+const AX_LET='АБВГДЕЖИКЛМНПРСТУФШЭЮЯ'; // без Ё З Й О Х Ц Ч Щ Ъ Ы Ь (ГОСТ Р 21.101)
+/* координационные оси: по осям наружных стен и перегородок */
+function planAxes(M){const d=M.d,axU=a=>[...new Set(a.map(v=>R(v)))].sort((p,q)=>p-q).filter((v,i,arr)=>!i||v-arr[i-1]>150);
+  return {ax:axU([d/2,...M.walls.filter(x=>!x.ext&&x.zb==null&&x.uy).map(x=>x.x0),M.A-d/2]),ay:axU([d/2,...M.walls.filter(x=>!x.ext&&x.zb==null&&x.ux).map(x=>x.y0),M.B-d/2])}}
 function tableBlock(x,y,w,h,title,cols,rows){
   const rh=4.0,hh=5.2,W=cols.reduce((a,c)=>a+c.w,0);let s=Tx(x,y-1.2,title,{a:'start',size:2.6,cls:'b'});
   const per=Math.max(1,Math.floor((h-hh)/rh)),ncol=Math.max(1,Math.floor((w+3)/(W+3)));
@@ -1726,9 +1729,7 @@ function sheetPlan(){
   const {A,B,d}=M,EW=96,aw=385-EW,mL=46,mR=30,mT=26,mB=44,s=fit(A,B,aw-mL-mR,222-mT-mB);
   const w=A/s,h=B/s,px0=25+mL+(aw-mL-mR-w)/2,py0=10+mT+(222-mT-mB-h)/2;
   const X=x=>px0+x/s,Y=y=>py0+(B-y)/s;let g=Tx(25+aw/2,16,`План 1 этажа  М 1:${s}`,{size:3.5,cls:'b'});
-  /* координационные оси: по осям наружных стен и перегородок */
-  const axU=a=>[...new Set(a.map(v=>R(v)))].sort((p,q)=>p-q).filter((v,i,arr)=>!i||v-arr[i-1]>150);
-  const ax=axU([d/2,...M.walls.filter(x=>!x.ext&&x.zb==null&&x.uy).map(x=>x.x0),A-d/2]),ay=axU([d/2,...M.walls.filter(x=>!x.ext&&x.zb==null&&x.ux).map(x=>x.y0),B-d/2]);
+  const {ax,ay}=planAxes(M);
   ax.forEach((x,i)=>{g+=Ln(X(x),Y(B)-5,X(x),Y(0)+35,'ax')+bubble(X(x),Y(0)+38.6,i+1)});
   ay.forEach((y,i)=>{g+=Ln(X(A)+5,Y(y),X(0)-35,Y(y),'ax')+bubble(X(0)-38.6,Y(y),AX_LET[i]||'?')});
   /* помещения: лёгкая заливка */
@@ -1821,6 +1822,40 @@ function sheetMans(){
   g+=tableBlock(25,240,200,40,'Элементы мансарды',MARK_COLS,markRows(x=>x.grp==='mans'||x.grp==='gable'));
   return {code:'АР-2',title:'План мансарды',sub:`Стенки ${M.kneeH} мм, потолок ${M.mansH} мм, уклон ${M.deg}°`,scale:s,body:g};
 }
+function sheetRoofPlan(code){
+  const {A,B,ov,og,tn,d}=M,W0=A+2*og,H0=B+2*ov,mL=46,mR=24,mT=26,mB=44,aw=385-96,s=fit(W0,H0,aw-mL-mR,222-mT-mB);
+  const w=W0/s,h=H0/s,px0=25+mL+(aw-mL-mR-w)/2+og/s,py0=10+mT+(222-mT-mB-h)/2+ov/s;
+  const X=x=>px0+x/s,Y=y=>py0+(B-y)/s;let g=Tx(25+aw/2,16,`План кровли  М 1:${s}`,{size:3.5,cls:'b'});
+  const {ax,ay}=planAxes(M);
+  ax.forEach((x,i)=>{g+=Ln(X(x),Y(B+ov)-5,X(x),Y(-ov)+35,'ax')+bubble(X(x),Y(-ov)+38.6,i+1)});
+  ay.forEach((y,i)=>{g+=Ln(X(A+og)+5,Y(y),X(-og)-35,Y(y),'ax')+bubble(X(-og)-38.6,Y(y),AX_LET[i]||'?')});
+  /* скаты: заливка, контур кровли, стены пунктиром */
+  const sl=M.gable?[[-ov,B/2],[B/2,B+ov]]:[[-ov,B+ov]];
+  sl.forEach(([y0,y1],i)=>g+=`<rect x="${f2(X(-og))}" y="${f2(Y(y1))}" width="${f2(W0/s)}" height="${f2((y1-y0)/s)}" fill="${i?'#EEF2F5':'#E6ECF1'}" stroke="none"/>`);
+  g+=Rc(X(-og),Y(B+ov),W0/s,H0/s,'m')+Rc(X(0),Y(B),A/s,B/s,'hd');
+  if(M.gable){g+=Ln(X(-og),Y(B/2),X(A+og),Y(B/2),'m');g+=Tx(X(A/2),Y(B/2)-1.2,'конёк',{size:2.2})}
+
+  /* стрелки уклона — по направлению стока воды */
+  const pct=R(tn*100),arrow=(x,yA,yB)=>{const ya=Y(yA),yb=Y(yB),dir=Math.sign(yb-ya)||1;return Ln(X(x),ya,X(x),yb,'m')+Pg([[X(x),yb],[X(x)-1.1,yb-dir*3],[X(x)+1.1,yb-dir*3]],'blk')+Tx(X(x)+1.6,(ya+yb)/2+.8,`${M.deg}° (${pct} %)`,{size:2.4,a:'start'})};
+  const xs=[A*.25,A*.75];
+  if(M.gable)xs.forEach(x=>{g+=arrow(x,B/2-ov*.4-B*.08,B/2-B*.36)+arrow(x,B/2+ov*.4+B*.08,B/2+B*.36)});
+  else xs.forEach(x=>g+=arrow(x,B*.8,B*.2));
+  /* отметки */
+  const zE=M.slopes[0].zA,zR=M.zRidge;
+  g+=Tx(X(A*.5),Y(-ov)-1.6,`отм. карниза ${elvTxt(zE-M.z0)}`,{size:2.2});if(M.gable)g+=Tx(X(A*.5),Y(B+ov)+3.6,`отм. карниза ${elvTxt(zE-M.z0)}`,{size:2.2});
+  g+=M.gable?Tx(X(A*.5),Y(B/2)+3.4,`отм. конька ${elvTxt(zR-M.z0)}`,{size:2.2}):Tx(X(A*.5),Y(B+ov)-1.6,`верх ската, отм. ${elvTxt(zR-M.z0)}`,{size:2.2});
+  /* размеры */
+  g+=chainH([-og,0,A,A+og],X,Y(-ov)+9,Y(-ov))+chainH([-og,...ax,A+og],X,Y(-ov)+17,Y(-ov))+dimH(X(-og),X(A+og),Y(-ov)+25,Y(-ov),R(W0));
+  g+=chainV([-ov,0,...(M.gable?[B/2]:[]),B,B+ov],Y,X(-og)-9,X(-og))+chainV([-ov,...ay,B+ov],Y,X(-og)-17,X(-og))+dimV(Y(-ov),Y(B+ov),X(-og)-25,X(-og),R(H0));
+  /* ведомость */
+  const eaves=(M.gable?2:1)*W0/1000,ex=25+aw+3;
+  g+=tableBlock(ex,30,91,80,'Кровля',[{t:'Показатель',w:55,a:'start'},{t:'Значение',w:36}],[
+    ['Тип',M.gable?'двускатная':'односкатная'],['Уклон',`${M.deg}° (${pct} %)`],['Покрытие',M.mat.name],
+    ['Площадь скатов',`${fmt(M.roofArea,1)} м²`],['Карнизный свес',`${M.ov} мм`],['Фронтонный свес',`${M.og} мм`],
+    ['Длина карнизов (желоба)',`${fmt(eaves,1)} м`],['Длина конька',M.gable?`${fmt(W0/1000,1)} м`:'—'],['Мин. уклон покрытия',`${M.mat.min}°`]]);
+  [`Стрелка — направление стока воды.`,`Водосточные трубы — ориентировочно`,`1 шт на 10 м желоба, не реже чем`,`по углам дома.`,M.deg<M.mat.min?`Уклон меньше допустимого для покрытия!`:''].filter(Boolean).forEach((t,i)=>g+=Tx(ex,30+5.2+9*4+10+i*4.2,t,{a:'start',size:2.2}));
+  return {code,title:'План кровли',sub:`${M.gable?'Двускатная':'Односкатная'}, ${M.deg}°, ${M.mat.name.toLowerCase()}, ${fmt(M.roofArea,1)} м²`,scale:s,body:g};
+}
 function sheetRoof(){
   const {A,B,ov,og,tn,cs,hr,br}=M,zMin=-700,zMax=M.zRidge+250,yMin=-ov-300,yMax=B+ov+300;
   const Wsec=yMax-yMin,Wpl=A+2*og,Hsec=zMax-zMin,Hpl=B+2*ov;
@@ -1874,7 +1909,7 @@ function sheetGeneral(list){
   return {code:'ОД',title:'Общие данные',sub:`Технология: ${T.short}`,scale:'—',body:g};
 }
 function makeSheets(){
-  const list=[sheetPlan(),...(M.mans&&M.mansOk?[sheetMans()]:[]),sheetPiles(),sheetGrill()];let k=1;
+  const mo=M.mans&&M.mansOk,list=[sheetPlan(),...(mo?[sheetMans()]:[]),sheetRoofPlan(mo?'АР-3':'АР-2'),sheetPiles(),sheetGrill()];let k=1;
   M.walls.forEach(wl=>list.push(sheetWall(wl,'КД-'+(k++))));
   list.push(sheetRoof());
   list.unshift(sheetGeneral([{code:'ОД',title:'Общие данные'},...list]));
