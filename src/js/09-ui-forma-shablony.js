@@ -3,8 +3,8 @@
    ======================================================================== */
 const opt=(o,fn)=>Object.entries(o).map(([k,v])=>[k,fn?fn(k,v):(v.name||v.n||v)]);
 const FORM=[
-  {id:'site',t:'1 · Местоположение',custom:'site'},
-  {id:'house',t:'2 · Технология и размеры',open:true,f:[
+  {id:'site',t:'1 · Исходные данные: участок',custom:'site'},
+  {id:'house',t:'3 · Исходные данные: технология и размеры',open:true,f:[
     {k:'tech',l:'Технология строительства',type:'sel',opts:Object.entries(TECH).map(([k,v])=>[k,v.n]),wide:true},
     {note:'techMsg'},
     {k:'name',l:'Название проекта',type:'text',wide:true},
@@ -13,7 +13,7 @@ const FORM=[
     {k:'H',l:'Высота стены',u:'мм',min:2200,max:3600,step:50},
     {k:'lumber',l:'Пиломатериал каркаса',type:'sel',opts:[['planed','1. Доска сухая строганая'],['edged','2. Доска сухая обрезная']],wide:true},
     {hint:'Размеры наружные, по обвязке. Конёк идёт вдоль длины. Высота — от чернового пола до верха верхней обвязки. Сечения всех деталей выбираются из базы материалов (вкладка «База материалов») по выбранному типу доски и подбираются по расчёту автоматически.'},{note:'lumberMsg'}]},
-  {id:'walls',t:'4 · Каркас стен',f:[
+  {id:'walls',t:'КР · Каркас стен',f:[
     {k:'studSec',l:'Стойка (ширина = утеплитель)',type:'sec',keys:['studB','studH'],rows:()=>frameRows(r=>r.b>=40&&r.h>=95)},
     {k:'studS',l:'Шаг стоек',u:'мм',min:300,max:1000,step:5},
     {k:'partH',l:'Стойка перегородок',type:'secH',rows:()=>frameRows(r=>r.b===+P.studB&&r.h>=70)},
@@ -29,11 +29,11 @@ const FORM=[
     {k:'nailStep',l:'Шаг крепежа по краю листа',type:'sel',opts:[[150,'150 мм'],[100,'100 мм']]},
     {k:'braceSec',l:'Доска укосины (врезная)',type:'sec',keys:['braceB','braceH'],rows:()=>dbRows('edged',r=>r.b<=32),show:()=>P.bracing==='braces'},
     {hint:'Укосины ставятся под 45–60° на сплошных участках стены, в каждой стене — обоих направлений. Если по СНиП им не хватает места (мешают проёмы), стена автоматически получает плитную обшивку. Фронтоны обшиваются всегда.'}]},
-  {id:'ops',t:'5 · Окна и двери',custom:'ops'},
-  {id:'iw',t:'6 · Перегородки',custom:'iw'},
-  {id:'blocks',t:'6а · Крылья дома (Г- и Т-образный план)',custom:'blocks'},
-  {id:'rooms',t:'6б · Помещения (АР)',custom:'rooms'},
-  {id:'found',t:'3 · Фундамент и пол',f:[
+  {id:'ops',t:'АР · Окна и двери',custom:'ops'},
+  {id:'iw',t:'АР · Перегородки',custom:'iw'},
+  {id:'blocks',t:'АР · Крылья дома (Г-, Т-, П-образный план)',custom:'blocks'},
+  {id:'rooms',t:'АР · Помещения',custom:'rooms'},
+  {id:'found',t:'КР · Фундамент и пол',f:[
     {k:'pile',l:'Свая',type:'sel',opts:opt(PILES),wide:true},
     {k:'pileFd',l:'Несущая способность сваи',u:'кН',min:5,max:300,step:1,show:()=>P.pile==='manual'},
     {k:'soil',l:'Грунт на глубине лопасти',type:'sel',opts:opt(SOILS),wide:true},
@@ -50,7 +50,7 @@ const FORM=[
     {k:'joistS',l:'Шаг лаг',u:'мм',min:300,max:1000,step:5},
     {k:'floorOsb',l:'OSB пола',u:'мм',type:'sel',opts:[[18,'18'],[22,'22']]},
     {hint:'Винтовые — по таблицам производителей. Забивные и буронабивные ЖБ — по СП 24.13330 (сопротивление под остриём + трение). Длина «авто» подбирается так, чтобы прошли проверки на нагрузку и пучение. Точные данные даёт геология.'}]},
-  {id:'roof',t:'7 · Кровля',f:[
+  {id:'roof',t:'АР · Кровля',f:[
     {k:'roof',l:'Тип крыши',type:'sel',opts:[['gable','Двускатная'],['shed','Односкатная']]},
     {k:'slope',l:'Уклон',u:'°',min:5,max:60,step:1},
     {k:'roofMat',l:'Покрытие',type:'sel',opts:opt(ROOFS),wide:true},
@@ -71,7 +71,7 @@ const FORM=[
     {k:'mansH',l:'Высота потолка мансарды',u:'мм',min:2100,max:3200,step:50,show:()=>P.mansard&&P.roof!=='shed'},
     {k:'kneeD',l:'Стойка стенки мансарды',type:'secH',rows:()=>frameRows(r=>r.b===+P.studB&&r.h>=70),show:()=>P.mansard&&P.roof!=='shed'},
     {hint:'Холодный чердак, висячая стропильная система: балки чердака работают затяжками.'}]},
-  {id:'loads',t:'8 · Климат и нагрузки',f:[
+  {id:'loads',t:'2 · Исходные данные: климат и нагрузки',f:[
     {k:'snow',l:'Снеговая нагрузка',type:'sel',opts:()=>[...(P.site?[['site',`По местоположению — ${fmt(snowVal({...P,snow:'site'}),2)} кПа`]]:[]),...Object.entries(SNOW).map(([k,v])=>[k,`Район ${k} — ${fmt(v,1)} кПа`])],wide:true},
     {k:'wind',l:'Ветровое давление',type:'sel',opts:()=>[...(P.site?[['site',`По местоположению — ${fmt(windVal({...P,wind:'site'}),3)} кПа`]]:[]),...Object.entries(WIND).map(([k,v])=>[k,`Район ${k} — ${fmt(v,2)} кПа`])],wide:true},
     {k:'terrain',l:'Тип местности',type:'sel',opts:opt(TERRAIN),wide:true},
@@ -104,7 +104,7 @@ const FORM=[
     {hint:'Цены примерные — впишите свои из прайса поставщика.'}]},
   {id:'file',t:'Файл проекта',custom:'file'}
 ];
-const F_ORDER=['site','house','found','walls','ops','iw','blocks','rooms','roof','loads','cutp','prices','file'];FORM.sort((a,c)=>F_ORDER.indexOf(a.id)-F_ORDER.indexOf(c.id));
+const F_ORDER=['site','loads','house','blocks','iw','ops','rooms','roof','found','walls','cutp','prices','file'];FORM.sort((a,c)=>F_ORDER.indexOf(a.id)-F_ORDER.indexOf(c.id));
 const getK=k=>k.split('.').reduce((o,x)=>o?.[x],P);
 const setK=(k,v)=>{const p=k.split('.');let o=P;for(let i=0;i<p.length-1;i++)o=o[p[i]];o[p.at(-1)]=v};
 
@@ -311,16 +311,17 @@ function renderTop(){
 }
 
 /* ---------- вкладки ---------- */
-const TABS=[['kb','База знаний'],['3d','3D-модель'],['draw','Чертежи'],['spec','Спецификация и смета'],['cut','Раскрой'],['calc','Расчёт',true],['adv','Советы',true],['db','База материалов']];
-let curTab='3d'; try{curTab=localStorage.getItem(LS_KEY+'-tab')||'3d'}catch(e){}
-if(!TABS.some(t=>t[0]===curTab)) curTab='3d';
+/* порядок работы: исходные данные (форма слева) → АР (план) → КР (3D, расчёт, чертежи, спецификация) */
+const TABS=[['plan','1 · План (АР)'],['3d','2 · 3D-модель'],['calc','3 · Расчёт (КР)',true],['draw','4 · Чертежи'],['spec','Спецификация и смета'],['cut','Раскрой'],['adv','Советы',true],['db','База материалов'],['kb','База знаний']];
+let curTab='plan'; try{curTab=localStorage.getItem(LS_KEY+'-tab2')||'plan'}catch(e){}
+if(!TABS.some(t=>t[0]===curTab)) curTab='plan';
 function renderTabs(){
   $('#tabs').innerHTML=TABS.map(([k,l,c])=>`<button role="tab" data-t="${k}" aria-selected="${k===curTab}">${l}${c?'<span class="cnt"></span>':''}</button>`).join('');
-  $('#tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{curTab=b.dataset.t;try{localStorage.setItem(LS_KEY+'-tab',curTab)}catch(e){}
+  $('#tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{curTab=b.dataset.t;try{localStorage.setItem(LS_KEY+'-tab2',curTab)}catch(e){}
     $('#tabs').querySelectorAll('button').forEach(x=>x.setAttribute('aria-selected',x===b));renderActive()});
 }
 function renderActive(){
   TABS.forEach(([k])=>{$('#tab-'+k).hidden=k!==curTab});
-  ({'3d':render3DTab,draw:renderDraw,spec:renderSpec,cut:renderCut,calc:renderCalc,adv:renderAdv,db:renderDB,kb:renderKB})[curTab]();
+  ({plan:renderPlan,'3d':render3DTab,draw:renderDraw,spec:renderSpec,cut:renderCut,calc:renderCalc,adv:renderAdv,db:renderDB,kb:renderKB})[curTab]();
 }
 
