@@ -450,7 +450,7 @@ const ROLE={
   'НО':'Нижняя обвязка','ВО':'Верхняя обвязка','С':'Стойка','СП':'Стойка проёма опорная','СК':'Стойка укороченная',
   'ПР':'Перемычка (доска на ребро)','Р':'Ригель подоконный','УК':'Укосина (раскос) врезная','ИО':'Обрешётка инсталляционного слоя','УТ':'Доска тёплого угла / примыкания (плашмя)','СФ':'Стойка фронтона / надстройки','ОФ':'Обвязка надстройки',
   'БП':'Балка перекрытия (чердак / мансарда)','СН':'Стропильная нога','СНФ':'Стропило фронтонного свеса','КБ':'Коньковая доска','ПК':'Стойка под стропило',
-  'КП':'Коньковый прогон','ПДК':'Подкос к коньковому прогону','СХ':'Схватка (ригель) пары стропил','СТК':'Стойка под коньковый прогон','ЛЖ':'Лежень под стойки','НР':'Нарожник (укороченное стропило у ендовы)','ЕН':'Ендовная балка (сдвоенная)','КР':'Контробрешётка','ОР':'Обрешётка','ВД':'Ветровая доска','ЛД':'Лобовая доска','РГ':'Ригель (затяжка) мансарды'
+  'КП':'Коньковый прогон','КОБ':'Кобылка (свес кровли)','ПДК':'Подкос к коньковому прогону','СХ':'Схватка (ригель) пары стропил','СТК':'Стойка под коньковый прогон','ЛЖ':'Лежень под стойки','НР':'Нарожник (укороченное стропило у ендовы)','ЕН':'Ендовная балка (сдвоенная)','КР':'Контробрешётка','ОР':'Обрешётка','ВД':'Ветровая доска','ЛД':'Лобовая доска','РГ':'Ригель (затяжка) мансарды'
 };
 const ROLE_ORDER=Object.keys(ROLE);
 const GRP={
@@ -477,7 +477,7 @@ const DEF={
   bracing:'sheathing',sheathMat:'osb9',nailStep:150,braceB:25,braceH:100,
   pile:'p108',pileFd:50,soil:'loam',freeze:1400,pileMaxS:2500,pileLen:'auto',plinth:500,
   beamType:'brus',beamB:150,beamH:200,packB:45,packH:195,beamPly:3,beamsMid:'auto',joistB:45,joistH:195,joistS:600,floorOsb:22,
-  roof:'gable',slope:30,roofMat:'metal',overhang:500,gableOver:400,rafterB:45,rafterH:195,rafterS:600,attB:45,attH:195,strut:false,rafterSys:'hang',ridgeJoint:'butt',purB:150,purH:200,postB:100,postH:100,postS:3000,purStruts:true,collar:true,mansard:false,kneeH:1200,mansH:2400,kneeD:95,gMans:.6,pMans:1.5,
+  roof:'gable',slope:30,roofMat:'metal',overhang:500,gableOver:400,rafterB:45,rafterH:195,rafterS:600,attB:45,attH:195,strut:false,rafterSys:'hang',ridgeJoint:'butt',eaveFilly:'auto',purB:150,purH:200,postB:100,postH:100,postS:3000,purStruts:true,collar:true,mansard:false,kneeH:1200,mansH:2400,kneeD:95,gMans:.6,pMans:1.5,
   snow:'III',wind:'I',terrain:'B',gFloor:.5,pFloor:1.5,gAttic:.35,pAttic:.7,gWall:.5,
   stocks:'6000, 4500, 3000',kerf:4,
   prices:{wood:28000,osb9:780,osb12:980,osb22:1950,insul:4300,wind:2600,vapor:1700,roofMetal:650,roofProf:520,roofSoft:820,roofOndulin:430,pile:2900,pileWork:1300,rc20:1500,rc30:2400,rcDrive:3500,plate:450,concrete:6800,rebar:80,sleeve:120,boredWork:1800,nails:260,screws:950,bracket:65,antiseptic:160,anchor:190,ply9:1350,csp12:1150,windBoard:750},
@@ -618,7 +618,9 @@ function build(P,OPT={}){
   const deg=Math.min(60,Math.max(3,n(P.slope))),al=rad(deg),tn=Math.tan(al),cs=Math.cos(al),sn=Math.sin(al);
   const ov=n(P.overhang),og=n(P.gableOver),gable=P.roof!=='shed',mat=ROOFS[P.roofMat]||ROOFS.metal;
   const zr0=zt+ha;
-  const M={P,np:1+(Math.max(1,Math.min(2,n(P.topPlates)||2))),pack,A,B,H,b,d,t,bb,hb,ply,bj,hj,sj,H0,z0,zt,ba,ha,br,hr,sr,deg,al,tn,cs,sn,ov,og,gable,mat,zr0,mem:[],errs:[],piles:[],lines:[],walls:[],ops:[]};
+  /* опорный узел стропила на стене: зарубка с горизонтальной площадкой длиной lb по верху балки, глубина lb·tg α ≤ h/4 (СП 64.13330) */
+  const hr0=n(P.rafterH),tn0=Math.tan(rad(Math.min(60,Math.max(3,n(P.slope))))),lb=Math.max(40,Math.min(n(P.studH),hr0/4/tn0)),zs=zr0-lb*tn0;
+  const M={zs,seat:{lb,depth:lb*tn0},P,np:1+(Math.max(1,Math.min(2,n(P.topPlates)||2))),pack,A,B,H,b,d,t,bb,hb,ply,bj,hj,sj,H0,z0,zt,ba,ha,br,hr,sr,deg,al,tn,cs,sn,ov,og,gable,mat,zr0,mem:[],errs:[],piles:[],lines:[],walls:[],ops:[]};
   const mem=M.mem;
   const add=o=>{mem.push(o);return o};
   const bar=(grp,role,sec,cnt,p0,p1,up,sy,sz,extra={})=>add({grp,role,sec,n:cnt,L:dist3(p0,p1),p0,p1,up,sy,sz,...extra});
@@ -629,9 +631,9 @@ function build(P,OPT={}){
   M.La=M.attSup!=null?Math.max(M.attSup-d/2,B-d/2-M.attSup):B-d;
   M.Lh0=gable?(B-d)/2:(B-d); M.Lh=P.strut?M.Lh0/2:M.Lh0;
   M.Ls=gable?(B/2+ov)/cs:(B+2*ov)/cs;
-  const zU=y=>gable?zr0+Math.min(y,B-y)*tn:zr0+y*tn; M.zU=zU;
+  const zU=y=>gable?zs+Math.min(y,B-y)*tn:zs+y*tn; M.zU=zU;
   M.mans=!!P.mansard&&gable; M.kneeH=n(P.kneeH)||1200; M.mansH=n(P.mansH)||2400; M.kneeD=n(P.kneeD)||100; M.zm=zt+ha+n(P.floorOsb);
-  if(M.mans){M.yk=Math.max(d+200,(M.kneeH+M.zm-zr0)/tn);M.zc=M.zm+M.mansH;M.yc=(M.zc-zr0)/tn;M.y15=Math.max(d,(M.zm+1500-zr0)/tn);
+  if(M.mans){M.yk=Math.max(d+200,(M.kneeH+M.zm-zs)/tn);M.zc=M.zm+M.mansH;M.yc=(M.zc-zs)/tn;M.y15=Math.max(d,(M.zm+1500-zs)/tn);
     M.mansOk=M.yc<B/2-300&&M.yk<B/2-600;M.L1=M.yk-d/2;M.L2=B/2-M.yk;if(M.mansOk)M.Lh=Math.max(M.L1,M.L2);
     M.mansArea=Math.max(0,B-2*M.y15)*(A-2*d)/1e6;M.mansFloor=Math.max(0,B-2*M.yk)*(A-2*d)/1e6}
 
@@ -818,7 +820,7 @@ function build(P,OPT={}){
   const xsR=[...M.xsA], barge=og>=150?[-og+br/2,A+og-br/2]:[];
   M.xsR=xsR; M.barge=barge;
   const slopes=gable?[{y0:-ov,y1:B/2,dir:1},{y0:B+ov,y1:B/2,dir:-1}]:[{y0:-ov,y1:B+ov,dir:1}];
-  slopes.forEach(sl=>{sl.e=[0,sl.dir*cs,sn];sl.n=[0,-sl.dir*sn,cs];sl.zA=zr0-ov*tn;sl.len=Math.abs(sl.y1-sl.y0)/cs;sl.zB=sl.zA+Math.abs(sl.y1-sl.y0)*tn});
+  slopes.forEach(sl=>{sl.e=[0,sl.dir*cs,sn];sl.n=[0,-sl.dir*sn,cs];sl.zA=zs-ov*tn;sl.len=Math.abs(sl.y1-sl.y0)/cs;sl.zB=sl.zA+Math.abs(sl.y1-sl.y0)*tn});
   M.slopes=slopes;
   const at=(sl,x,s,off)=>[x,sl.y0+sl.e[1]*s+sl.n[1]*off,sl.zA+sl.e[2]*s+sl.n[2]*off];
   const Lraf=r10(M.Ls+hr*tn);
@@ -826,12 +828,18 @@ function build(P,OPT={}){
   const cutS=(sl,x)=>{if(!gable)return 0;let sv=0;(M.wingRoofs||[]).filter(r=>!r.end&&(r.k.side==='W3'?sl.dir<0:sl.dir>0)).forEach(r=>{const dx=Math.abs(x-r.xc);if(dx<r.half+ov)sv=Math.max(sv,(ov+r.half-dx)/cs)});return sv};
   /* узел на коньке: «в стык с подрезкой» — торцы пары сходятся на оси конька; «внахлёст» — стропила второго ската сдвинуты на толщину и заходят за конёк на 1,5h */
   const lap=gable&&P.ridgeJoint==='lap',ext=lap?r10(1.5*hr):0;M.ridgeJoint=gable?(lap?'lap':'butt'):null;M.ridgeExt=ext;
+  /* свес: кобылка (короткая доска сбоку стропила) — стропило обрезано у стены; авто — при свесе от 600 мм или если стропило со свесом длиннее доски на складе */
+  const rRow=findRow(br,hr),maxStock=rRow?Math.max(...parseStocks(rRow.lens||'6000')):6000,fill=gable&&(P.eaveFilly==='yes'||(P.eaveFilly!=='no'&&(ov>=600||Lraf>maxStock)));
+  const fr=fill?(nearestRow(frameRows(r=>r.b>=40&&r.h>=95&&r.h<=hr),50,150)||{b:br,h:Math.min(hr,150)}):null,fOver=Math.max(600,ov),tail=50;
+  M.filly=fill?{b:fr.b,h:fr.h,over:fOver,tail,L:r10((ov+fOver)/cs+fr.h*tn)}:null;
+  const kb=gable&&!lap&&!M.purlin?br:0;
   slopes.forEach(sl=>{[...xsR.map(x=>[x,'СН']),...barge.map(x=>[x,'СНФ'])].forEach(([x,role])=>{const sv=cutS(sl,x);if(sv>=sl.len-80)return;
-    const xx=lap&&sl.dir<0?(x>A/2&&role==='СНФ'?x-br:x+br):x;
-    bar('roof',sv>0?'НР':role,[br,hr],1,at(sl,xx,sv,hr/2),at(sl,xx,sl.len+ext,hr/2),sl.n,hr,br,{L:sv>0?r10(sl.len-sv+ext+hr*tn):r10(Lraf+ext)})})});
-  M.zRidge=gable?zr0+B/2*tn+hr/cs:zr0+(B+ov)*tn+hr/cs;
+    const xx=lap&&sl.dir<0?(x>A/2&&role==='СНФ'?x-br:x+br):x,fl=fill&&role==='СН'&&sv===0,s0=fl?(ov-tail)/cs:sv,s1=sl.len+ext-kb/2/cs,yEnd=sl.y1+sl.dir*(ext*cs-kb/2);
+    const pc=hr/2*tn;bar('roof',sv>0?'НР':role,[br,hr],1,at(sl,xx,sv>0?s0:s0-pc,hr/2),at(sl,xx,s1+pc,hr/2),sl.n,hr,br,{L:r10(s1-s0+hr*tn),cuts:[sv>0?null:{y:sl.y0+sl.dir*s0*cs},{y:yEnd}]});
+    if(fl){const xf=xx+(x>A/2?-1:1)*(br+fr.b)/2;bar('roof','КОБ',[fr.b,fr.h],1,at(sl,xf,0,hr-fr.h/2),at(sl,xf,(ov+fOver)/cs,hr-fr.h/2),sl.n,fr.h,fr.b,{L:M.filly.L,cuts:[{y:sl.y0},null]})}})});
+  M.zRidge=gable?zs+B/2*tn+hr/cs:zs+(B+ov)*tn+hr/cs;
   M.purlin=gable&&!M.mans&&P.rafterSys==='purlin';
-  if(M.purlin){const pb=n(P.purB),ph=n(P.purH),qb=n(P.postB),qh=n(P.postH),ps=Math.max(1000,n(P.postS)),zPt=zr0+(B/2-pb/2)*tn,zL1=zt+ha+qb;
+  if(M.purlin){const pb=n(P.purB),ph=n(P.purH),qb=n(P.postB),qh=n(P.postH),ps=Math.max(1000,n(P.postS)),zPt=zs+(B/2-pb/2)*tn,zL1=zt+ha+qb;
     const nn=Math.max(1,Math.ceil((A-2*d)/ps)),xsP=[d/2,...[...Array(nn-1)].map((_,i)=>d+(A-2*d)*(i+1)/nn),A-d/2];
     bar('roof','КП',[pb,ph],1,[-og,B/2,zPt-ph/2],[A+og,B/2,zPt-ph/2],[0,0,1],ph,pb,{splitAt:rel(xsP,-og)});
     xsP.forEach(x=>bar('roof','СТК',[qb,qh],1,[x,B/2,zL1],[x,B/2,zPt-ph],[0,1,0],qh,qb,{}));
@@ -841,7 +849,7 @@ function build(P,OPT={}){
     let nC=0,cs2=null;if(P.collar){const zc=zL1+Lp*.6,yC=(zc-zr0)/tn,row=findRow(25,150),sc=row?[25,150]:[n(P.braceB),n(P.braceH)];cs2=sc;
       if(yC>d&&yC<B/2-pb)xsR.forEach(x=>{[-1,1].forEach(sd=>bar('roof','СХ',sc,1,[x+sd*(br/2+sc[0]/2),yC,zc],[x+sd*(br/2+sc[0]/2),B-yC,zc],[0,0,1],sc[1],sc[0],{}));nC++})}
     M.pur={pb,ph,qb,qh,xs:xsP,zPt,Lpost:Lp,notch:pb/2*tn,span,aS,nC,cs2,onWall:M.attSup!=null&&Math.abs(M.attSup-B/2)<=300}}
-  if(gable&&!M.purlin){const zTop=zr0+B/2*tn+hr/cs;bar('roof','КБ',[br,hr],1,[-og,B/2,zTop-hr/2],[A+og,B/2,zTop-hr/2],[0,0,1],hr,br,{splitAt:rel(xsR,-og)})}
+  if(gable&&!M.purlin&&P.ridgeJoint!=='lap'){const zTop=zs+B/2*tn+hr/cs;bar('roof','КБ',[br,hr],1,[-og,B/2,zTop-hr/2],[A+og,B/2,zTop-hr/2],[0,0,1],hr,br,{splitAt:rel(xsR,-og)})}
   if(M.mans&&M.mansOk){const hc=150,yT=(M.zc+hc/2-zr0-hr/cs)/tn;M.yT=yT;xsR.forEach(x=>bar('mans','РГ',[50,hc],1,[x+br,yT,M.zc+hc/2],[x+br,B-yT,M.zc+hc/2],[0,0,1],hc,50,{}))}
   if(P.strut&&!M.mans&&!M.purlin){(gable?[B/4,3*B/4]:[B/2]).forEach(y=>xsR.forEach(x=>{const hh=zU(y)-zr0;bar('roof','ПК',[br,150],1,[x+br,y,zr0],[x+br,y,zr0+hh],[0,1,0],150,br,{})}))}
   M.strutY=P.strut&&!M.mans&&!M.purlin?(gable?[B/4,3*B/4]:[B/2]):[];
@@ -860,12 +868,12 @@ function build(P,OPT={}){
   });
   M.roofArea=slopes.reduce((s,sl)=>s+sl.len*(A+2*og),0)/1e6;
   /* крыши крыльев */
-  const zE=zr0-ov*tn,offC=hr+(cb?cb[0]:0)+lt[0]+6;
+  const zE=zs-ov*tn,offC=hr+(cb?cb[0]:0)+lt[0]+6;
   const rafter=(px,py,ux,uy,t0,t1,role,n=1)=>{const nn=[-ux*sn,-uy*sn,cs],B0=t=>[px+ux*t,py+uy*t,zE+t*tn],q=(t,o)=>{const b=B0(t);return [b[0]+nn[0]*o,b[1]+nn[1]*o,b[2]+nn[2]*o]};
     return {nn,q,m:role?bar('roof',role,[br,hr],n,q(t0,hr/2),q(t1,hr/2),nn,hr,br*n,{L:r10((t1-t0)/cs+hr*tn)}):null}};
   M.roofInfo={eaves:gable?2*(A+2*og):(A+2*og),ridge:gable?A+2*og:0,valleys:0,valleyN:0};
   /* крыши крыльев в системе стороны: a — вдоль стены, r — наружу. Шаг стропил привязан к осям дома (k.o) */
-  M.wingRoofs.forEach(r=>{const k=r.k,h=r.half,T=h+ov,zRk=zr0+h*tn+hr/cs,G=k.G,Tv=k.T,Nv=k.N,a0=k.off,a1=k.off+k.Wd,ac=(a0+a1)/2,D=k.D,re=D+og,zA0=zE;
+  M.wingRoofs.forEach(r=>{const k=r.k,h=r.half,T=h+ov,zRk=zs+h*tn+hr/cs,G=k.G,Tv=k.T,Nv=k.N,a0=k.off,a1=k.off+k.Wd,ac=(a0+a1)/2,D=k.D,re=D+og,zA0=zE;
     const P3=(a,rr,z)=>[...G(a,rr),z],mv=(p,rr)=>[p[0]+Nv[0]*rr,p[1]+Nv[1]*rr,p[2]],A_=(x,y)=>Tv[0]?x:y;
     const slope=(ae,dir,rs,rEnd)=>{const st=G(ae,0),f=rafter(st[0],st[1],Tv[0]*dir,Tv[1]*dir,0,T,null),rows=[];for(let s0=60;s0<T/cs-120;s0+=mat.step)rows.push(s0*cs);rows.push(T-60*cs);
       rows.forEach(t=>{const a=f.q(t,hr+(cb?cb[0]:0)+lt[0]/2),r0=rs(t);bar('lath','ОР',[lt[0],lt[1]],1,mv(a,r0),mv(a,rEnd),f.nn,lt[0],lt[1],{splitAt:rel(ts,r0)})});
@@ -884,7 +892,7 @@ function build(P,OPT={}){
         rafter(p[0],p[1],Tv[0],Tv[1],t0,T,role);rafter(q[0],q[1],-Tv[0],-Tv[1],t0,T,role);
         if(rr>ba&&rr<D-ba)bar('attic','БП',[ba,ha],1,P3(a0,rr,za),P3(a1,rr,za),[0,0,1],ha,ba,{})});
       bar('roof','КБ',[br,hr],1,P3(ac,-h,zRk-hr/2),P3(ac,re,zRk-hr/2),[0,0,1],hr,br,{splitAt:rel(ts,-h)});
-      const zAp=zr0+h*tn;r.valleys=[];[a0-ov,a1+ov].forEach(ae=>{const p0=P3(ac,-h,zAp+hr/2),p1=P3(ae,ov,zE+hr/2),L=dist3(p0,p1);bar('roof','ЕН',[br,hr],2,p0,p1,[0,0,1],hr,2*br,{L:r10(L+hr)});M.roofInfo.valleys+=L;M.roofInfo.valleyN++;r.valleys.push([G(ac,-h),G(ae,ov)])});
+      const zAp=zs+h*tn;r.valleys=[];[a0-ov,a1+ov].forEach(ae=>{const p0=P3(ac,-h,zAp+hr/2),p1=P3(ae,ov,zE+hr/2),L=dist3(p0,p1);bar('roof','ЕН',[br,hr],2,p0,p1,[0,0,1],hr,2*br,{L:r10(L+hr)});M.roofInfo.valleys+=L;M.roofInfo.valleyN++;r.valleys.push([G(ac,-h),G(ae,ov)])});
       slope(a0-ov,1,t=>Math.min(re,ov-t),re);slope(a1+ov,-1,t=>Math.min(re,ov-t),re);
       r.polys=[{pl:[[a0-ov,ov],[ac,-h],[ac,re],[a0-ov,re]].map(q=>G(...q)),z:(x,y)=>zA0+(A_(x,y)-(a0-ov))*tn,sk:[0,1]},{pl:[[a1+ov,ov],[a1+ov,re],[ac,re],[ac,-h]].map(q=>G(...q)),z:(x,y)=>zA0+(a1+ov-A_(x,y))*tn,sk:[2,3]}];
       r.ridge=[G(ac,-h),G(ac,re)];
@@ -1044,6 +1052,14 @@ function calc(M){
    push('rafter','Стропильная нога',`${b}×${h}`,`шаг ${M.sr} мм · пролёт ${fmt(Lh/1000,2)} м по горизонтали${M.mans&&M.mansOk?' (опора на стенку мансарды)':M.purlin?' (опора на коньковый прогон)':P.strut?' (со стойкой)':''}`,Math.max(sig/R_I,f/flim),[
      ['Снег на кровлю S, кПа',fmt(l.S,2)+(l.mu<1?` (μ=${fmt(l.mu,2)})`:'')],['Ветер на скат, кПа',fmt(l.wR,3)],
      ['Нагрузка расч., кН/м',fmt(qv,2)],['Момент M, кН·м',fmt(Mm/1e6,2)],['σ / R, МПа',fmt(sig,1)+' / '+R_I],['Прогиб f / fпред, мм',fmt(f,1)+' / '+fmt(flim,1)]])}
+  /* узлы стропила у стены: зарубка (опора на балку) и свес — консоль стропила или кобылка */
+  if(M.gable||M.Hr){const cs2=M.cs,s=M.sr/1000,qv=(l.gR/cs2*1.1+l.S*1.4)*s,sd=M.seat,R1=qv*M.Lh/2,sg=R1/(M.br*sd.lb);
+    push('seat','Опора стропила на стену (зарубка)',`площадка ${R(sd.lb)} мм, глубина ${R(sd.depth)} мм`,`стропило ${M.br}×${M.hr} на балке перекрытия, уклон ${M.deg}°`,Math.max(sd.depth/(M.hr/3),sg/3),[['Глубина зарубки, мм',R(sd.depth)],['Предел 1/3 h (рекомендуется 1/4 h), мм',R(M.hr/3)+' ('+R(M.hr/4)+')'],['Опорная реакция, кН',fmt(R1/1000,2)],['Смятие поперёк волокон, МПа',fmt(sg,2)+' / 3']]);
+    out.at(-1).note='Стропило опирается горизонтальной площадкой (зарубкой) на балку перекрытия и крепится к ней гвоздями 4×100 или уголком; от отрыва ветром — скрутка или уголок к обвязке (см. «Крепление стропил»). СП 64.13330: глубина врубки — не более 1/3 h.';
+    const f=M.filly,b=f?f.b:M.br,h=f?f.h:M.hr,ov=M.ov,Mo=qv*ov*ov/2,W=b*h*h/6,sig=Mo/W,rows=[['Вынос свеса по горизонтали, мм',ov],['Момент у стены, кН·м',fmt(Mo/1e6,2)],['σ / R, МПа',fmt(sig,1)+' / '+R_I]];
+    let u=sig/R_I;if(f){const arm=f.over*.7,F=Mo/arm/1000,T=.65,nN=Math.max(4,Math.ceil(2*F/T));rows.push(['Нахлёст кобылки на стропило, мм',f.over],['Гвоздей 4×100 в соединение',nN]);u=Math.max(u,nN/16)}
+    push('overhang',f?'Свес кровли: кобылка':'Свес кровли: консоль стропила',`${b}×${h}`,f?`кобылка длиной ${f.L} мм сбоку каждого стропила`:`вынос ${ov} мм без кобылки`,u,rows);
+    out.at(-1).note=f?'Стропило обрезают у стены, свес набирают кобылкой той же ширины сбоку стропила на гвоздях вразбежку (или 2 болта М10). Кобылка нужна при большом свесе или когда стропило со свесом длиннее доски.':'Свес — продолжение стропила (консоль). При свесе от 600 мм или длинном стропиле включите кобылки (раздел «Кровля»).'}
   // балки чердака
   {const b=M.ba,h=M.ha,s=M.sr/1000,L=M.La,self=SELF*b*h;
    const qd=(l.gA*1.2+l.pA*1.3)*s+self*1.1, qn=(l.gA+l.pA)*s+self, c=bend({b,h,L,qd,qn,lim:M.mans?250:200});
@@ -1567,6 +1583,7 @@ const FORM=[
     {k:'rafterS',l:'Шаг стропил',u:'мм',min:300,max:1200,step:5},
     {k:'attSec',l:'Балка перекрытия',type:'sec',keys:['attB','attH'],rows:()=>frameRows(r=>r.b>=40&&r.h>=120)},
     {k:'rafterSys',l:'Стропильная система',type:'sel',opts:[['hang','Висячая — балки перекрытия работают затяжками'],['purlin','Наслонная — коньковый прогон на стойках']],wide:true,show:()=>!P.mansard&&P.roof!=='shed'},
+    {k:'eaveFilly',l:'Свес кровли',type:'sel',opts:[['auto','Автоматически: кобылки при свесе от 600 мм или длинном стропиле'],['yes','Кобылки к стропилам'],['no','Свес — продолжение стропила']],wide:true,show:()=>P.roof!=='shed'},
     {k:'ridgeJoint',l:'Стропила на коньке',type:'sel',opts:[['butt','В стык с подрезкой — торцы запилены по уклону'],['lap','Внахлёст — стропила рядом, стянуты болтом']],wide:true,show:()=>P.roof!=='shed'},
     {k:'purSec',l:'Коньковый прогон (брус)',type:'sec',keys:['purB','purH'],rows:()=>dbRows('beam'),show:()=>P.rafterSys==='purlin'&&!P.mansard&&P.roof!=='shed'},
     {k:'postSec',l:'Стойка и лежень (брус)',type:'sec',keys:['postB','postH'],rows:()=>dbRows('beam'),show:()=>P.rafterSys==='purlin'&&!P.mansard&&P.roof!=='shed'},
@@ -1895,6 +1912,12 @@ function init3D(){
   cv.addEventListener('wheel',e=>{e.preventDefault();R3.cam.r=Math.min(120,Math.max(2,R3.cam.r*Math.pow(1.0015,e.deltaY)));draw3()},{passive:false});
   window.addEventListener('resize',()=>{if(curTab==='3d')resize3()});
 }
+/* брусок с торцами, запиленными вертикальной плоскостью y = const (конёк, свес): 4 продольных ребра обрезаются плоскостями */
+function cutGeo(m,x,y,z,p0,p1){const hs=m.sy/2,hw=m.sz/2,C=[];[[-1,-1],[1,-1],[1,1],[-1,1]].forEach(([a,b])=>{const o=y.clone().multiplyScalar(a*hs).add(z.clone().multiplyScalar(b*hw)),A=p0.clone().add(o),B=p1.clone().add(o),
+    end=(P0,P1,c,dflt)=>{if(!c||Math.abs(P1.y-P0.y)<1e-6)return dflt;const t=(c.y-P0.y)/(P1.y-P0.y);return P0.clone().lerp(P1,t)};C.push([end(A,B,m.cuts[0],A),end(A,B,m.cuts[1],B)])});
+  const v=i=>C[i%4],q=[];const quad=(a,b,c,d)=>q.push(a,b,c,a,c,d);
+  for(let i=0;i<4;i++)quad(v(i)[0],v(i+1)[0],v(i+1)[1],v(i)[1]);quad(C[0][0],C[3][0],C[2][0],C[1][0]);quad(C[0][1],C[1][1],C[2][1],C[3][1]);
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(q.flatMap(p=>[p.x,p.y,p.z]),3));g.computeVertexNormals();return g}
 function mat3(key,color,opts={}){if(!R3.mats[key])R3.mats[key]=new THREE.MeshLambertMaterial({color,...opts});return R3.mats[key]}
 function boxGeo(L,y,z){const k=R(L)+'|'+R(y)+'|'+R(z);let g=R3.geoCache.get(k);if(!g){g=new THREE.BoxGeometry(L,y,z);R3.geoCache.set(k,g)}return g}
 function build3D(){
@@ -1906,10 +1929,10 @@ function build3D(){
   M.mem.forEach(m=>{
     const p0=new THREE.Vector3(...m.p0),p1=new THREE.Vector3(...m.p1),L=p0.distanceTo(p1);if(L<1)return;
     const x=p1.clone().sub(p0).normalize();let y=new THREE.Vector3(...m.up);y.sub(x.clone().multiplyScalar(y.dot(x))).normalize();const z=new THREE.Vector3().crossVectors(x,y);
-    const g=boxGeo(L,Math.max(1,m.sy),Math.max(1,m.sz));
+    const g=m.cuts?cutGeo(m,x,y,z,p0,p1):boxGeo(L,Math.max(1,m.sy),Math.max(1,m.sz));
     const color=m.role==='ПР'?0xb0612b:m.role==='Р'?0xc98a4c:m.role==='УК'?0x8f4f22:m.role==='УТ'?0x4a6fd0:GRP[m.grp].c;
     const mt=m.grp==='cover'?mat3('cover',GRP.cover.c,{transparent:true,opacity:.55,side:THREE.DoubleSide}):mat3('c'+color,color);
-    const mesh=new THREE.Mesh(g,mt);mesh.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(x,y,z));mesh.position.copy(p0).add(p1).multiplyScalar(.5);mesh.userData.m=m;
+    const mesh=new THREE.Mesh(g,mt);if(!m.cuts){mesh.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(x,y,z));mesh.position.copy(p0).add(p1).multiplyScalar(.5)}mesh.userData.m=m;
     if(m.grp!=='cover'&&m.grp!=='lath'){const eg=new THREE.EdgesGeometry(g);const ln=new THREE.LineSegments(eg,edgeMat);mesh.add(ln)}
     R3.groups[m.grp].add(mesh);
   });
@@ -2377,7 +2400,7 @@ function sheetWall(wl,code){
   const X=u=>px0+(u-u0)/s,Y=v=>py0+(v1-v)/s;
   let g=Tx(25+385/2,16,`${wl.name}: развёртка каркаса  М 1:${s}`,{size:3.5,cls:'b'});
   if(ctxGable){const z=zb,ys=[],tops=[];const yA=-M.ov,yE=M.B+M.ov;for(let i=0;i<=40;i++){const y=yA+(yE-yA)*i/40;ys.push(y)}
-    const und=ys.map(y=>[X(y-wl.y0),Y((M.gable?M.zr0+Math.min(y,M.B-y)*M.tn:M.zr0+y*M.tn)-z)]),top=ys.map(y=>[X(y-wl.y0),Y((M.gable?M.zr0+Math.min(y,M.B-y)*M.tn:M.zr0+y*M.tn)+M.hr/M.cs-z)]);
+    const und=ys.map(y=>[X(y-wl.y0),Y(M.zU(y)-z)]),top=ys.map(y=>[X(y-wl.y0),Y((M.gable?M.zr0+Math.min(y,M.B-y)*M.tn:M.zr0+y*M.tn)+M.hr/M.cs-z)]);
     g+=Pg([...und,...top.reverse()],'ctx');g+=Rc(X(-wl.y0),Y(M.zt+M.ha-z),M.B/s,M.ha/s,'ctx');g+=Tx(X(M.B/2-wl.y0),Y(M.zt+M.ha/2-z)+.8,'балка перекрытия БП (торец)',{size:2})}
   else if(wl.ext&&!wl.top){g+=Rc(X(0),Y(M.H+M.ha),wl.L/s,M.ha/s,'ctx');g+=Tx(X(wl.L/2),Y(M.H+M.ha/2)+.8,'балки чердака БП, шаг '+M.sr,{size:2})}
   ms.filter(m=>m.role==='ИО').forEach(m=>{const L=m.loc;g+=Rc(X(L.u0),Y(L.v1),(L.u1-L.u0)/s,(L.v1-L.v0)/s,'hd')});
@@ -2564,13 +2587,14 @@ function sheetRoof(){
   g+=Rc(Xs(0),Zs(M.zt+M.ha),B/s,M.ha/s,'w');
   if(M.mans&&M.mansOk){g+=Rc(Xs(0),Zs(M.zm),B/s,(M.zm-M.zt-M.ha)/s,'w2');[M.yk,B-M.yk].forEach(y=>g+=Rc(Xs(y-M.kneeD/2),Zs(M.zm+M.kneeH),M.kneeD/s,M.kneeH/s,'wlp'));
     g+=Rc(Xs(M.yT),Zs(M.zc+150),(B-2*M.yT)/s,150/s,'w3');g+=Tx(Xs(B/2),Zs(M.zm+M.mansH/2),'МАНСАРДА',{size:3,cls:'b'})}
-  const ex=M.ridgeExt||0;M.slopes.forEach(sl=>{const ze=sl.zA,yy=sl.y1+sl.dir*ex*cs,zr=sl.zB+ex*M.sn,o=hr/cs;g+=Pg([[Xs(sl.y0),Zs(ze)],[Xs(yy),Zs(zr)],[Xs(yy),Zs(zr+o)],[Xs(sl.y0),Zs(ze+o)]],'w2');
+  const ex=M.ridgeExt||0,kb=M.gable&&M.ridgeJoint!=='lap'&&!M.purlin?br:0,fl=M.filly;M.slopes.forEach(sl=>{const zb=y=>sl.zA+Math.abs(y-sl.y0)*M.tn,ys=fl?sl.y0+sl.dir*(M.ov-fl.tail):sl.y0,yy=M.gable?sl.y1+sl.dir*(ex*cs-kb/2):sl.y1,ze=zb(ys),zr=zb(yy),o=hr/cs;g+=Pg([[Xs(ys),Zs(ze)],[Xs(yy),Zs(zr)],[Xs(yy),Zs(zr+o)],[Xs(ys),Zs(ze+o)]],'w2');
+    if(fl){const y2=sl.y0+sl.dir*(M.ov+fl.over),of=fl.h/cs;g+=Pg([[Xs(sl.y0),Zs(zb(sl.y0)+o-of)],[Xs(y2),Zs(zb(y2)+o-of)],[Xs(y2),Zs(zb(y2)+o)],[Xs(sl.y0),Zs(zb(sl.y0)+o)]],'w3')}
     const ofr=(hr+(M.mat.counter?M.mat.counter[0]:0)+M.mat.lath[0]+8)/cs;g+=Ln(Xs(sl.y0),Zs(ze+ofr),Xs(yy),Zs(zr+ofr),'m')});
   if(M.purlin){const pu=M.pur;g+=Rc(Xs(B/2-pu.pb/2),Zs(pu.zPt),pu.pb/s,pu.ph/s,'w3')+Rc(Xs(B/2-pu.qh/2),Zs(pu.zPt-pu.ph),pu.qh/s,pu.Lpost/s,'w2')+Rc(Xs(B/2-pu.qh/2),Zs(M.zt+M.ha+pu.qb),pu.qh/s,pu.qb/s,'w2');
-    if(pu.nC){const zc=M.zt+M.ha+pu.qb+pu.Lpost*.6,yC=(zc-M.zr0)/M.tn;g+=Rc(Xs(yC),Zs(zc+pu.cs2[1]/2),(B-2*yC)/s,pu.cs2[1]/s,'w2')+Tx(Xs(B/2)-pu.qh/2/s-1.5,Zs(zc)-1.6,`СХ ${pu.cs2.join('×')}`,{a:'end',size:2.1})}
+    if(pu.nC){const zc=M.zt+M.ha+pu.qb+pu.Lpost*.6,yC=(zc-M.zs)/M.tn;g+=Rc(Xs(yC),Zs(zc+pu.cs2[1]/2),(B-2*yC)/s,pu.cs2[1]/s,'w2')+Tx(Xs(B/2)-pu.qh/2/s-1.5,Zs(zc)-1.6,`СХ ${pu.cs2.join('×')}`,{a:'end',size:2.1})}
     g+=Ln(Xs(B/2)+pu.pb/2/s,Zs(pu.zPt-pu.ph/2),Xs(B/2)+pu.pb/2/s+14,Zs(pu.zPt-pu.ph/2)-6)+Tx(Xs(B/2)+pu.pb/2/s+15,Zs(pu.zPt-pu.ph/2)-6.6,`КП ${pu.pb}×${pu.ph}, врубка ${R(pu.notch)}`,{a:'start',size:2.1})+Tx(Xs(B/2)+pu.qh/2/s+1.5,Zs(pu.zPt-pu.ph-pu.Lpost/2),`СТК ${pu.qb}×${pu.qh}`,{a:'start',size:2.1})}
   else if(M.gable&&M.ridgeJoint!=='lap')g+=Rc(Xs(B/2-br/2),Zs(M.zRidge),br/s,hr/s,'w3');
-  if(M.gable){const zk=M.zr0+B/2*M.tn+hr/cs/2;if(M.ridgeJoint==='lap')g+=Ci(Xs(B/2),Zs(zk),Math.max(.6,6/s),'m');g+=Ln(Xs(B/2)-2,Zs(zk),Xs(B/2)-16,Zs(zk)-9)+Tx(Xs(B/2)-17,Zs(zk)-9.6,M.ridgeJoint==='lap'?`конёк: внахлёст, заход ${M.ridgeExt}, болт М12`:'конёк: в стык с подрезкой, накладки',{a:'end',size:2.1})}
+  if(M.gable){const zk=M.zs+B/2*M.tn+hr/cs/2;if(M.ridgeJoint==='lap')g+=Ci(Xs(B/2),Zs(zk),Math.max(.6,6/s),'m');g+=Ln(Xs(B/2)-2,Zs(zk),Xs(B/2)-16,Zs(zk)-9)+Tx(Xs(B/2)-17,Zs(zk)-9.6,M.ridgeJoint==='lap'?`конёк: внахлёст, заход ${M.ridgeExt}, болт М12`:'конёк: в стык с подрезкой, накладки',{a:'end',size:2.1})}
   M.strutY.forEach(y=>g+=Rc(Xs(y-br/2),Zs(M.zU(y)),br/s,(M.zU(y)-M.zr0)/s,'w3'));
   const a0=Xs(0)+(M.gable?14:16),z0p=Zs(M.zr0);g+=`<path d="M${f2(Xs(0)+12)} ${f2(z0p)} A12 12 0 0 0 ${f2(Xs(0)+12*Math.cos(M.al))} ${f2(z0p-12*Math.sin(M.al))}" class="t"/>`+Ln(Xs(0),z0p,Xs(0)+15,z0p)+Tx(a0+1,z0p-2,`${M.deg}°`,{size:2.4,a:'start'});
   g+=chainH([-ov,0,B,B+ov],Xs,Zs(zMin)+7,null);g+=chainH([0,...M.lines.filter(l=>l.axis==='x'&&l.wing==null).map(l=>l.c),B],Xs,Zs(zMin)+15,null);
@@ -2605,10 +2629,46 @@ function sheetGeneral(list){
   g+=tableBlock(230,30,180,200,'Ведомость листов',[{t:'Лист',w:12},{t:'Шифр',w:18},{t:'Наименование',w:100,a:'start'}],list.map((x,i)=>[i+1,x.code,x.title]));
   return {code:'ОД',title:'Общие данные',sub:`Технология: ${T.short}`,scale:'—',body:g};
 }
+/* ---------- КР-2: узлы кровли — разрезы, нарезанные из 3D-модели плоскостью x = const ---------- */
+function memSection(x0,grps){const sub=(a,b)=>a.map((v,i)=>v-b[i]),add=(a,b)=>a.map((v,i)=>v+b[i]),mul=(a,k)=>a.map(v=>v*k),dot=(a,b)=>a.reduce((t,v,i)=>t+v*b[i],0),
+    cr=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],nr=a=>mul(a,1/Math.hypot(...a)),out=[];
+  M.mem.filter(m=>grps.includes(m.grp)&&m.sec).forEach(m=>{const X=nr(sub(m.p1,m.p0)),U=nr(sub(m.up,mul(X,dot(m.up,X)))),Z=cr(X,U),C=[];
+    [-1,1].forEach(a=>[-1,1].forEach(c=>[0,1].forEach(t=>C.push(add(add(add(m.p0,mul(sub(m.p1,m.p0),t)),mul(U,a*m.sy/2)),mul(Z,c*m.sz/2))))));
+    let pts=[];for(let i=0;i<8;i++)for(let j=i+1;j<8;j++){const d=sub(C[i],C[j]);if([Math.abs(dot(d,X))>1,Math.abs(dot(d,U))>1,Math.abs(dot(d,Z))>1].filter(Boolean).length!==1)continue;
+      const a=C[i],b=C[j];if((a[0]-x0)*(b[0]-x0)<=0&&Math.abs(a[0]-b[0])>1e-6){const t=(x0-a[0])/(b[0]-a[0]);pts.push([a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t])}}
+    if(pts.length<3)return;const cx=pts.reduce((t,q)=>t+q[0],0)/pts.length,cy=pts.reduce((t,q)=>t+q[1],0)/pts.length;pts.sort((a,b)=>Math.atan2(a[1]-cy,a[0]-cx)-Math.atan2(b[1]-cy,b[0]-cx));
+    if(m.cuts){const mid=(m.p0[1]+m.p1[1])/2;m.cuts.forEach(c=>{if(!c)return;pts=clipPoly(pts,q=>(q[0]-c.y)*(mid-c.y),q=>c.y,0)})}
+    if(pts.length>=3)out.push({m,pts})});return out}
+/* отсечение многоугольника полуплоскостью f(q) ≥ 0; ax — 0 (вертикальная граница y=v(q)) или 1 (горизонтальная z=v(q)) */
+function clipPoly(pts,f,v,ax){const o=[];for(let i=0;i<pts.length;i++){const a=pts[i],b=pts[(i+1)%pts.length],fa=f(a),fb=f(b);if(fa>=-1e-6)o.push(a);if((fa>=-1e-6)!==(fb>=-1e-6)){const t=fa/(fa-fb);o.push([a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t])}}return o}
+function sheetNodes(){const {B,br,hr,tn,cs}=M,s=10,ck=id=>(C?.checks||[]).find(c=>c.id===id);let g=Tx(25+385/2,16,'Узлы кровли (разрезы по стропилу)',{size:3.5,cls:'b'});
+  const xr=M.xsR[Math.floor(M.xsR.length/2)],grps=['roof','attic','walls','lath'],base=memSection(xr,grps);
+  const kob=M.mem.find(m=>m.role==='КОБ'),fill=kob?memSection(kob.p0[0],['roof']).filter(q=>q.m.role==='КОБ'):[];
+  const CLS={roof:'w2',attic:'w',walls:'w',lath:'w'};
+  const node=(n,title,px,py,w,h,cy,cz,polys,extra)=>{const y0=cy-w*s/2,z1=cz+h*s/2,X=y=>px+(y-y0)/s,Z=z=>py+(z1-z)/s;let q=Rc(px,py,w,h,'t');
+    const ord={lath:0,roof:1,walls:2,attic:3};[...polys].sort((a,b)=>(ord[a.m.grp]??1)-(ord[b.m.grp]??1)).forEach(({m,pts})=>{let c=pts;[[q2=>q2[0]-y0],[q2=>y0+w*s-q2[0]],[q2=>z1-q2[1]],[q2=>q2[1]-(z1-h*s)]].forEach(([f])=>c=clipPoly(c,f,null,0));if(c.length>=3)q+=Pg(c.map(([y,z])=>[X(y),Z(z)]),m.role==='КОБ'?'w3':CLS[m.grp]||'w')});
+    q+=bubble(px+5,py-5,n)+Tx(px+11,py-4,title,{a:'start',size:2.8,cls:'b'})+Tx(px+w,py-4,'М 1:'+s,{a:'end',size:2.4});return q+(extra?extra(X,Z):'')};
+  /* узел 1: опора стропила на стене (зарубка) */
+  const sd=M.seat,sl0=M.slopes[0];
+  g+=node(1,'Опора стропила на стену',25,32,120,90,M.seat.lb,M.zr0,base,(X,Z)=>dimH(X(0),X(sd.lb),Z(M.zr0)+12,Z(M.zr0),R(sd.lb))+dimV(Z(M.zr0-sd.depth),Z(M.zr0),X(0)-14,X(0),R(sd.depth))
+    +Tx(X(sd.lb)+8,Z(M.zr0)+20,`зарубка: площадка ${R(sd.lb)}, глубина ${R(sd.depth)} ≤ h/4`,{a:'start',size:2.2})+Tx(X(sd.lb)+8,Z(M.zr0)+24,`СН ${br}×${hr} на БП ${M.ba}×${M.ha}, гв. 4×100 + уголок`,{a:'start',size:2.2}));
+  /* узел 2: конёк */
+  const lap=M.ridgeJoint==='lap',zk=M.zs+B/2*tn+hr/cs,nr=ck('node_ridge');
+  g+=node(2,lap?'Конёк: стропила внахлёст':'Конёк: стропила в стык с подрезкой',155,32,120,90,B/2,zk-hr*.6,base,(X,Z)=>(lap?Ci(X(B/2),Z(zk-hr/cs/2),1.4,'m')+dimH(X(B/2),X(B/2+M.ridgeExt*cs),Z(zk)-10,Z(zk),M.ridgeExt+' заход'):Tx(X(B/2),Z(zk)-6,'КБ — коньковая доска',{size:2.2}))
+    +Tx(155+60,32+84,nr?`${nr.sec||''}`:'',{size:2.2}));
+  /* узел 3: свес */
+  const f=M.filly,ov=M.ov,o3=ck('overhang');
+  g+=node(3,f?'Свес: кобылка':'Свес: консоль стропила',285,32,120,90,f?-ov/2+150:-ov/2+100,M.zs+50,[...base,...fill],(X,Z)=>dimH(X(-ov),X(0),Z(M.zs-ov*tn)+8,null,ov+' свес')
+    +(f?dimH(X(0),X(Math.min(f.over,(f?-ov/2+150:0)+600-60)),Z(M.zs)+16,null,'нахлёст '+f.over):'')+Tx(285+60,32+84,o3?`${o3.sec}${f?` · кобылка ${f.L} мм`:''}`:'',{size:2.2}));
+  /* примечания из расчёта */
+  const nt=[['seat','Узел 1'],['node_ridge','Узел 2'],['overhang','Узел 3']].map(([id,t])=>{const c=ck(id);return c?`${t}: ${c.title} — ${c.sec}, запас ${Math.max(0,Math.round((1-c.u)*100))} %. ${c.note||''}`:''}).filter(Boolean);
+  let y=140;nt.forEach(t=>{const words=t.split(' ');let line='';words.forEach(w=>{if((line+w).length>150){g+=Tx(25,y,line,{a:'start',size:2.3});y+=4.2;line=''}line+=w+' '});g+=Tx(25,y,line,{a:'start',size:2.3});y+=6});
+  g+=Tx(25,y+2,'Разрезы построены по модели: торцы стропил запилены вертикально, стропило опирается на балку перекрытия горизонтальной площадкой.',{a:'start',size:2.2});
+  return {code:'КР-2',title:'Узлы кровли',sub:`${lap?'Конёк внахлёст':'Конёк в стык'}${f?', свес кобылками':''}`,scale:s,body:g}}
 function makeSheets(){
   const mo=M.mans&&M.mansOk,list=[sheetPlan(),...(mo?[sheetMans()]:[]),sheetRoofPlan(mo?'АР-3':'АР-2'),sheetFacades(mo?'АР-4':'АР-3'),sheetFinish(mo?'АР-5':'АР-4'),sheetPiles(),sheetGrill()];let k=1;
   M.walls.forEach(wl=>list.push(sheetWall(wl,'КД-'+(k++))));
-  list.push(sheetRoof());
+  list.push(sheetRoof());if(M.gable&&!(M.mans&&M.mansOk))list.push(sheetNodes());
   list.unshift(sheetGeneral([{code:'ОД',title:'Общие данные'},...list]));
   return list.map((x,i)=>({...x,n:i+1,svg:wrapSheet(x.body,{project:P.name||'Проект',title:x.title,sub:x.sub,code:x.code,scale:x.scale,n:i+1,total:list.length})}));
 }

@@ -1,7 +1,7 @@
 function makeSheets(){
   const mo=M.mans&&M.mansOk,list=[sheetPlan(),...(mo?[sheetMans()]:[]),sheetRoofPlan(mo?'АР-3':'АР-2'),sheetFacades(mo?'АР-4':'АР-3'),sheetFinish(mo?'АР-5':'АР-4'),sheetPiles(),sheetGrill()];let k=1;
   M.walls.forEach(wl=>list.push(sheetWall(wl,'КД-'+(k++))));
-  list.push(sheetRoof());
+  list.push(sheetRoof());if(M.gable&&!(M.mans&&M.mansOk))list.push(sheetNodes());
   list.unshift(sheetGeneral([{code:'ОД',title:'Общие данные'},...list]));
   return list.map((x,i)=>({...x,n:i+1,svg:wrapSheet(x.body,{project:P.name||'Проект',title:x.title,sub:x.sub,code:x.code,scale:x.scale,n:i+1,total:list.length})}));
 }

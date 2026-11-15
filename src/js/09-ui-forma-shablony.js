@@ -62,6 +62,7 @@ const FORM=[
     {k:'rafterS',l:'Шаг стропил',u:'мм',min:300,max:1200,step:5},
     {k:'attSec',l:'Балка перекрытия',type:'sec',keys:['attB','attH'],rows:()=>frameRows(r=>r.b>=40&&r.h>=120)},
     {k:'rafterSys',l:'Стропильная система',type:'sel',opts:[['hang','Висячая — балки перекрытия работают затяжками'],['purlin','Наслонная — коньковый прогон на стойках']],wide:true,show:()=>!P.mansard&&P.roof!=='shed'},
+    {k:'eaveFilly',l:'Свес кровли',type:'sel',opts:[['auto','Автоматически: кобылки при свесе от 600 мм или длинном стропиле'],['yes','Кобылки к стропилам'],['no','Свес — продолжение стропила']],wide:true,show:()=>P.roof!=='shed'},
     {k:'ridgeJoint',l:'Стропила на коньке',type:'sel',opts:[['butt','В стык с подрезкой — торцы запилены по уклону'],['lap','Внахлёст — стропила рядом, стянуты болтом']],wide:true,show:()=>P.roof!=='shed'},
     {k:'purSec',l:'Коньковый прогон (брус)',type:'sec',keys:['purB','purH'],rows:()=>dbRows('beam'),show:()=>P.rafterSys==='purlin'&&!P.mansard&&P.roof!=='shed'},
     {k:'postSec',l:'Стойка и лежень (брус)',type:'sec',keys:['postB','postH'],rows:()=>dbRows('beam'),show:()=>P.rafterSys==='purlin'&&!P.mansard&&P.roof!=='shed'},

@@ -97,7 +97,7 @@ function sheetWall(wl,code){
   const X=u=>px0+(u-u0)/s,Y=v=>py0+(v1-v)/s;
   let g=Tx(25+385/2,16,`${wl.name}: развёртка каркаса  М 1:${s}`,{size:3.5,cls:'b'});
   if(ctxGable){const z=zb,ys=[],tops=[];const yA=-M.ov,yE=M.B+M.ov;for(let i=0;i<=40;i++){const y=yA+(yE-yA)*i/40;ys.push(y)}
-    const und=ys.map(y=>[X(y-wl.y0),Y((M.gable?M.zr0+Math.min(y,M.B-y)*M.tn:M.zr0+y*M.tn)-z)]),top=ys.map(y=>[X(y-wl.y0),Y((M.gable?M.zr0+Math.min(y,M.B-y)*M.tn:M.zr0+y*M.tn)+M.hr/M.cs-z)]);
+    const und=ys.map(y=>[X(y-wl.y0),Y(M.zU(y)-z)]),top=ys.map(y=>[X(y-wl.y0),Y((M.gable?M.zr0+Math.min(y,M.B-y)*M.tn:M.zr0+y*M.tn)+M.hr/M.cs-z)]);
     g+=Pg([...und,...top.reverse()],'ctx');g+=Rc(X(-wl.y0),Y(M.zt+M.ha-z),M.B/s,M.ha/s,'ctx');g+=Tx(X(M.B/2-wl.y0),Y(M.zt+M.ha/2-z)+.8,'балка перекрытия БП (торец)',{size:2})}
   else if(wl.ext&&!wl.top){g+=Rc(X(0),Y(M.H+M.ha),wl.L/s,M.ha/s,'ctx');g+=Tx(X(wl.L/2),Y(M.H+M.ha/2)+.8,'балки чердака БП, шаг '+M.sr,{size:2})}
   ms.filter(m=>m.role==='ИО').forEach(m=>{const L=m.loc;g+=Rc(X(L.u0),Y(L.v1),(L.u1-L.u0)/s,(L.v1-L.v0)/s,'hd')});

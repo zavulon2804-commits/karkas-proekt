@@ -62,13 +62,14 @@ function sheetRoof(){
   g+=Rc(Xs(0),Zs(M.zt+M.ha),B/s,M.ha/s,'w');
   if(M.mans&&M.mansOk){g+=Rc(Xs(0),Zs(M.zm),B/s,(M.zm-M.zt-M.ha)/s,'w2');[M.yk,B-M.yk].forEach(y=>g+=Rc(Xs(y-M.kneeD/2),Zs(M.zm+M.kneeH),M.kneeD/s,M.kneeH/s,'wlp'));
     g+=Rc(Xs(M.yT),Zs(M.zc+150),(B-2*M.yT)/s,150/s,'w3');g+=Tx(Xs(B/2),Zs(M.zm+M.mansH/2),'МАНСАРДА',{size:3,cls:'b'})}
-  const ex=M.ridgeExt||0;M.slopes.forEach(sl=>{const ze=sl.zA,yy=sl.y1+sl.dir*ex*cs,zr=sl.zB+ex*M.sn,o=hr/cs;g+=Pg([[Xs(sl.y0),Zs(ze)],[Xs(yy),Zs(zr)],[Xs(yy),Zs(zr+o)],[Xs(sl.y0),Zs(ze+o)]],'w2');
+  const ex=M.ridgeExt||0,kb=M.gable&&M.ridgeJoint!=='lap'&&!M.purlin?br:0,fl=M.filly;M.slopes.forEach(sl=>{const zb=y=>sl.zA+Math.abs(y-sl.y0)*M.tn,ys=fl?sl.y0+sl.dir*(M.ov-fl.tail):sl.y0,yy=M.gable?sl.y1+sl.dir*(ex*cs-kb/2):sl.y1,ze=zb(ys),zr=zb(yy),o=hr/cs;g+=Pg([[Xs(ys),Zs(ze)],[Xs(yy),Zs(zr)],[Xs(yy),Zs(zr+o)],[Xs(ys),Zs(ze+o)]],'w2');
+    if(fl){const y2=sl.y0+sl.dir*(M.ov+fl.over),of=fl.h/cs;g+=Pg([[Xs(sl.y0),Zs(zb(sl.y0)+o-of)],[Xs(y2),Zs(zb(y2)+o-of)],[Xs(y2),Zs(zb(y2)+o)],[Xs(sl.y0),Zs(zb(sl.y0)+o)]],'w3')}
     const ofr=(hr+(M.mat.counter?M.mat.counter[0]:0)+M.mat.lath[0]+8)/cs;g+=Ln(Xs(sl.y0),Zs(ze+ofr),Xs(yy),Zs(zr+ofr),'m')});
   if(M.purlin){const pu=M.pur;g+=Rc(Xs(B/2-pu.pb/2),Zs(pu.zPt),pu.pb/s,pu.ph/s,'w3')+Rc(Xs(B/2-pu.qh/2),Zs(pu.zPt-pu.ph),pu.qh/s,pu.Lpost/s,'w2')+Rc(Xs(B/2-pu.qh/2),Zs(M.zt+M.ha+pu.qb),pu.qh/s,pu.qb/s,'w2');
-    if(pu.nC){const zc=M.zt+M.ha+pu.qb+pu.Lpost*.6,yC=(zc-M.zr0)/M.tn;g+=Rc(Xs(yC),Zs(zc+pu.cs2[1]/2),(B-2*yC)/s,pu.cs2[1]/s,'w2')+Tx(Xs(B/2)-pu.qh/2/s-1.5,Zs(zc)-1.6,`СХ ${pu.cs2.join('×')}`,{a:'end',size:2.1})}
+    if(pu.nC){const zc=M.zt+M.ha+pu.qb+pu.Lpost*.6,yC=(zc-M.zs)/M.tn;g+=Rc(Xs(yC),Zs(zc+pu.cs2[1]/2),(B-2*yC)/s,pu.cs2[1]/s,'w2')+Tx(Xs(B/2)-pu.qh/2/s-1.5,Zs(zc)-1.6,`СХ ${pu.cs2.join('×')}`,{a:'end',size:2.1})}
     g+=Ln(Xs(B/2)+pu.pb/2/s,Zs(pu.zPt-pu.ph/2),Xs(B/2)+pu.pb/2/s+14,Zs(pu.zPt-pu.ph/2)-6)+Tx(Xs(B/2)+pu.pb/2/s+15,Zs(pu.zPt-pu.ph/2)-6.6,`КП ${pu.pb}×${pu.ph}, врубка ${R(pu.notch)}`,{a:'start',size:2.1})+Tx(Xs(B/2)+pu.qh/2/s+1.5,Zs(pu.zPt-pu.ph-pu.Lpost/2),`СТК ${pu.qb}×${pu.qh}`,{a:'start',size:2.1})}
   else if(M.gable&&M.ridgeJoint!=='lap')g+=Rc(Xs(B/2-br/2),Zs(M.zRidge),br/s,hr/s,'w3');
-  if(M.gable){const zk=M.zr0+B/2*M.tn+hr/cs/2;if(M.ridgeJoint==='lap')g+=Ci(Xs(B/2),Zs(zk),Math.max(.6,6/s),'m');g+=Ln(Xs(B/2)-2,Zs(zk),Xs(B/2)-16,Zs(zk)-9)+Tx(Xs(B/2)-17,Zs(zk)-9.6,M.ridgeJoint==='lap'?`конёк: внахлёст, заход ${M.ridgeExt}, болт М12`:'конёк: в стык с подрезкой, накладки',{a:'end',size:2.1})}
+  if(M.gable){const zk=M.zs+B/2*M.tn+hr/cs/2;if(M.ridgeJoint==='lap')g+=Ci(Xs(B/2),Zs(zk),Math.max(.6,6/s),'m');g+=Ln(Xs(B/2)-2,Zs(zk),Xs(B/2)-16,Zs(zk)-9)+Tx(Xs(B/2)-17,Zs(zk)-9.6,M.ridgeJoint==='lap'?`конёк: внахлёст, заход ${M.ridgeExt}, болт М12`:'конёк: в стык с подрезкой, накладки',{a:'end',size:2.1})}
   M.strutY.forEach(y=>g+=Rc(Xs(y-br/2),Zs(M.zU(y)),br/s,(M.zU(y)-M.zr0)/s,'w3'));
   const a0=Xs(0)+(M.gable?14:16),z0p=Zs(M.zr0);g+=`<path d="M${f2(Xs(0)+12)} ${f2(z0p)} A12 12 0 0 0 ${f2(Xs(0)+12*Math.cos(M.al))} ${f2(z0p-12*Math.sin(M.al))}" class="t"/>`+Ln(Xs(0),z0p,Xs(0)+15,z0p)+Tx(a0+1,z0p-2,`${M.deg}°`,{size:2.4,a:'start'});
   g+=chainH([-ov,0,B,B+ov],Xs,Zs(zMin)+7,null);g+=chainH([0,...M.lines.filter(l=>l.axis==='x'&&l.wing==null).map(l=>l.c),B],Xs,Zs(zMin)+15,null);
@@ -103,3 +104,39 @@ function sheetGeneral(list){
   g+=tableBlock(230,30,180,200,'Ведомость листов',[{t:'Лист',w:12},{t:'Шифр',w:18},{t:'Наименование',w:100,a:'start'}],list.map((x,i)=>[i+1,x.code,x.title]));
   return {code:'ОД',title:'Общие данные',sub:`Технология: ${T.short}`,scale:'—',body:g};
 }
+/* ---------- КР-2: узлы кровли — разрезы, нарезанные из 3D-модели плоскостью x = const ---------- */
+function memSection(x0,grps){const sub=(a,b)=>a.map((v,i)=>v-b[i]),add=(a,b)=>a.map((v,i)=>v+b[i]),mul=(a,k)=>a.map(v=>v*k),dot=(a,b)=>a.reduce((t,v,i)=>t+v*b[i],0),
+    cr=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],nr=a=>mul(a,1/Math.hypot(...a)),out=[];
+  M.mem.filter(m=>grps.includes(m.grp)&&m.sec).forEach(m=>{const X=nr(sub(m.p1,m.p0)),U=nr(sub(m.up,mul(X,dot(m.up,X)))),Z=cr(X,U),C=[];
+    [-1,1].forEach(a=>[-1,1].forEach(c=>[0,1].forEach(t=>C.push(add(add(add(m.p0,mul(sub(m.p1,m.p0),t)),mul(U,a*m.sy/2)),mul(Z,c*m.sz/2))))));
+    let pts=[];for(let i=0;i<8;i++)for(let j=i+1;j<8;j++){const d=sub(C[i],C[j]);if([Math.abs(dot(d,X))>1,Math.abs(dot(d,U))>1,Math.abs(dot(d,Z))>1].filter(Boolean).length!==1)continue;
+      const a=C[i],b=C[j];if((a[0]-x0)*(b[0]-x0)<=0&&Math.abs(a[0]-b[0])>1e-6){const t=(x0-a[0])/(b[0]-a[0]);pts.push([a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t])}}
+    if(pts.length<3)return;const cx=pts.reduce((t,q)=>t+q[0],0)/pts.length,cy=pts.reduce((t,q)=>t+q[1],0)/pts.length;pts.sort((a,b)=>Math.atan2(a[1]-cy,a[0]-cx)-Math.atan2(b[1]-cy,b[0]-cx));
+    if(m.cuts){const mid=(m.p0[1]+m.p1[1])/2;m.cuts.forEach(c=>{if(!c)return;pts=clipPoly(pts,q=>(q[0]-c.y)*(mid-c.y),q=>c.y,0)})}
+    if(pts.length>=3)out.push({m,pts})});return out}
+/* отсечение многоугольника полуплоскостью f(q) ≥ 0; ax — 0 (вертикальная граница y=v(q)) или 1 (горизонтальная z=v(q)) */
+function clipPoly(pts,f,v,ax){const o=[];for(let i=0;i<pts.length;i++){const a=pts[i],b=pts[(i+1)%pts.length],fa=f(a),fb=f(b);if(fa>=-1e-6)o.push(a);if((fa>=-1e-6)!==(fb>=-1e-6)){const t=fa/(fa-fb);o.push([a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t])}}return o}
+function sheetNodes(){const {B,br,hr,tn,cs}=M,s=10,ck=id=>(C?.checks||[]).find(c=>c.id===id);let g=Tx(25+385/2,16,'Узлы кровли (разрезы по стропилу)',{size:3.5,cls:'b'});
+  const xr=M.xsR[Math.floor(M.xsR.length/2)],grps=['roof','attic','walls','lath'],base=memSection(xr,grps);
+  const kob=M.mem.find(m=>m.role==='КОБ'),fill=kob?memSection(kob.p0[0],['roof']).filter(q=>q.m.role==='КОБ'):[];
+  const CLS={roof:'w2',attic:'w',walls:'w',lath:'w'};
+  const node=(n,title,px,py,w,h,cy,cz,polys,extra)=>{const y0=cy-w*s/2,z1=cz+h*s/2,X=y=>px+(y-y0)/s,Z=z=>py+(z1-z)/s;let q=Rc(px,py,w,h,'t');
+    const ord={lath:0,roof:1,walls:2,attic:3};[...polys].sort((a,b)=>(ord[a.m.grp]??1)-(ord[b.m.grp]??1)).forEach(({m,pts})=>{let c=pts;[[q2=>q2[0]-y0],[q2=>y0+w*s-q2[0]],[q2=>z1-q2[1]],[q2=>q2[1]-(z1-h*s)]].forEach(([f])=>c=clipPoly(c,f,null,0));if(c.length>=3)q+=Pg(c.map(([y,z])=>[X(y),Z(z)]),m.role==='КОБ'?'w3':CLS[m.grp]||'w')});
+    q+=bubble(px+5,py-5,n)+Tx(px+11,py-4,title,{a:'start',size:2.8,cls:'b'})+Tx(px+w,py-4,'М 1:'+s,{a:'end',size:2.4});return q+(extra?extra(X,Z):'')};
+  /* узел 1: опора стропила на стене (зарубка) */
+  const sd=M.seat,sl0=M.slopes[0];
+  g+=node(1,'Опора стропила на стену',25,32,120,90,M.seat.lb,M.zr0,base,(X,Z)=>dimH(X(0),X(sd.lb),Z(M.zr0)+12,Z(M.zr0),R(sd.lb))+dimV(Z(M.zr0-sd.depth),Z(M.zr0),X(0)-14,X(0),R(sd.depth))
+    +Tx(X(sd.lb)+8,Z(M.zr0)+20,`зарубка: площадка ${R(sd.lb)}, глубина ${R(sd.depth)} ≤ h/4`,{a:'start',size:2.2})+Tx(X(sd.lb)+8,Z(M.zr0)+24,`СН ${br}×${hr} на БП ${M.ba}×${M.ha}, гв. 4×100 + уголок`,{a:'start',size:2.2}));
+  /* узел 2: конёк */
+  const lap=M.ridgeJoint==='lap',zk=M.zs+B/2*tn+hr/cs,nr=ck('node_ridge');
+  g+=node(2,lap?'Конёк: стропила внахлёст':'Конёк: стропила в стык с подрезкой',155,32,120,90,B/2,zk-hr*.6,base,(X,Z)=>(lap?Ci(X(B/2),Z(zk-hr/cs/2),1.4,'m')+dimH(X(B/2),X(B/2+M.ridgeExt*cs),Z(zk)-10,Z(zk),M.ridgeExt+' заход'):Tx(X(B/2),Z(zk)-6,'КБ — коньковая доска',{size:2.2}))
+    +Tx(155+60,32+84,nr?`${nr.sec||''}`:'',{size:2.2}));
+  /* узел 3: свес */
+  const f=M.filly,ov=M.ov,o3=ck('overhang');
+  g+=node(3,f?'Свес: кобылка':'Свес: консоль стропила',285,32,120,90,f?-ov/2+150:-ov/2+100,M.zs+50,[...base,...fill],(X,Z)=>dimH(X(-ov),X(0),Z(M.zs-ov*tn)+8,null,ov+' свес')
+    +(f?dimH(X(0),X(Math.min(f.over,(f?-ov/2+150:0)+600-60)),Z(M.zs)+16,null,'нахлёст '+f.over):'')+Tx(285+60,32+84,o3?`${o3.sec}${f?` · кобылка ${f.L} мм`:''}`:'',{size:2.2}));
+  /* примечания из расчёта */
+  const nt=[['seat','Узел 1'],['node_ridge','Узел 2'],['overhang','Узел 3']].map(([id,t])=>{const c=ck(id);return c?`${t}: ${c.title} — ${c.sec}, запас ${Math.max(0,Math.round((1-c.u)*100))} %. ${c.note||''}`:''}).filter(Boolean);
+  let y=140;nt.forEach(t=>{const words=t.split(' ');let line='';words.forEach(w=>{if((line+w).length>150){g+=Tx(25,y,line,{a:'start',size:2.3});y+=4.2;line=''}line+=w+' '});g+=Tx(25,y,line,{a:'start',size:2.3});y+=6});
+  g+=Tx(25,y+2,'Разрезы построены по модели: торцы стропил запилены вертикально, стропило опирается на балку перекрытия горизонтальной площадкой.',{a:'start',size:2.2});
+  return {code:'КР-2',title:'Узлы кровли',sub:`${lap?'Конёк внахлёст':'Конёк в стык'}${f?', свес кобылками':''}`,scale:s,body:g}}

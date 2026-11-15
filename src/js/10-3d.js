@@ -47,6 +47,12 @@ function init3D(){
   cv.addEventListener('wheel',e=>{e.preventDefault();R3.cam.r=Math.min(120,Math.max(2,R3.cam.r*Math.pow(1.0015,e.deltaY)));draw3()},{passive:false});
   window.addEventListener('resize',()=>{if(curTab==='3d')resize3()});
 }
+/* брусок с торцами, запиленными вертикальной плоскостью y = const (конёк, свес): 4 продольных ребра обрезаются плоскостями */
+function cutGeo(m,x,y,z,p0,p1){const hs=m.sy/2,hw=m.sz/2,C=[];[[-1,-1],[1,-1],[1,1],[-1,1]].forEach(([a,b])=>{const o=y.clone().multiplyScalar(a*hs).add(z.clone().multiplyScalar(b*hw)),A=p0.clone().add(o),B=p1.clone().add(o),
+    end=(P0,P1,c,dflt)=>{if(!c||Math.abs(P1.y-P0.y)<1e-6)return dflt;const t=(c.y-P0.y)/(P1.y-P0.y);return P0.clone().lerp(P1,t)};C.push([end(A,B,m.cuts[0],A),end(A,B,m.cuts[1],B)])});
+  const v=i=>C[i%4],q=[];const quad=(a,b,c,d)=>q.push(a,b,c,a,c,d);
+  for(let i=0;i<4;i++)quad(v(i)[0],v(i+1)[0],v(i+1)[1],v(i)[1]);quad(C[0][0],C[3][0],C[2][0],C[1][0]);quad(C[0][1],C[1][1],C[2][1],C[3][1]);
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(q.flatMap(p=>[p.x,p.y,p.z]),3));g.computeVertexNormals();return g}
 function mat3(key,color,opts={}){if(!R3.mats[key])R3.mats[key]=new THREE.MeshLambertMaterial({color,...opts});return R3.mats[key]}
 function boxGeo(L,y,z){const k=R(L)+'|'+R(y)+'|'+R(z);let g=R3.geoCache.get(k);if(!g){g=new THREE.BoxGeometry(L,y,z);R3.geoCache.set(k,g)}return g}
 function build3D(){
@@ -58,10 +64,10 @@ function build3D(){
   M.mem.forEach(m=>{
     const p0=new THREE.Vector3(...m.p0),p1=new THREE.Vector3(...m.p1),L=p0.distanceTo(p1);if(L<1)return;
     const x=p1.clone().sub(p0).normalize();let y=new THREE.Vector3(...m.up);y.sub(x.clone().multiplyScalar(y.dot(x))).normalize();const z=new THREE.Vector3().crossVectors(x,y);
-    const g=boxGeo(L,Math.max(1,m.sy),Math.max(1,m.sz));
+    const g=m.cuts?cutGeo(m,x,y,z,p0,p1):boxGeo(L,Math.max(1,m.sy),Math.max(1,m.sz));
     const color=m.role==='ПР'?0xb0612b:m.role==='Р'?0xc98a4c:m.role==='УК'?0x8f4f22:m.role==='УТ'?0x4a6fd0:GRP[m.grp].c;
     const mt=m.grp==='cover'?mat3('cover',GRP.cover.c,{transparent:true,opacity:.55,side:THREE.DoubleSide}):mat3('c'+color,color);
-    const mesh=new THREE.Mesh(g,mt);mesh.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(x,y,z));mesh.position.copy(p0).add(p1).multiplyScalar(.5);mesh.userData.m=m;
+    const mesh=new THREE.Mesh(g,mt);if(!m.cuts){mesh.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(x,y,z));mesh.position.copy(p0).add(p1).multiplyScalar(.5)}mesh.userData.m=m;
     if(m.grp!=='cover'&&m.grp!=='lath'){const eg=new THREE.EdgesGeometry(g);const ln=new THREE.LineSegments(eg,edgeMat);mesh.add(ln)}
     R3.groups[m.grp].add(mesh);
   });
