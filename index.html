@@ -585,6 +585,14 @@ function build(P,OPT={}){
     M.mansOk=M.yc<B/2-300&&M.yk<B/2-600;M.L1=M.yk-d/2;M.L2=B/2-M.yk;if(M.mansOk)M.Lh=Math.max(M.L1,M.L2);
     M.mansArea=Math.max(0,B-2*M.y15)*(A-2*d)/1e6;M.mansFloor=Math.max(0,B-2*M.yk)*(A-2*d)/1e6}
 
+  /* крылья (Г- и Т-образный план): прямоугольный блок примыкает к стене 2 или 3 основного дома.
+     Стена основного дома на стыке остаётся — она становится внутренней несущей стеной. */
+  M.wings=[];M.AX=A;M.BY=B;
+  (P.blocks||[]).forEach((bk,i)=>{const side=bk.side==='W3'?'W3':'W2',off=n(bk.off),Wd=n(bk.w),D=n(bk.depth),Ls=side==='W2'?B:A,nm='крыло '+(i+1),id0=5+3*i,ids=[0,1,2].map(k=>'W'+(id0+k));
+    if(!(Wd>=2000&&D>=1500&&off>=0&&off+Wd<=Ls+1)){M.errs.push({wall:'K'+(i+1),msg:`Крыло ${i+1} не построено: ширина должна быть от 2000 мм, вынос от 1500 мм, и крыло должно помещаться вдоль стены ${side.slice(1)} (её длина ${Ls} мм)`});return}
+    const W2=side==='W2',x0=W2?A:off,x1=W2?A+D:off+Wd,y0=W2?off:B,y1=W2?off+Wd:B+D;
+    M.wings.push({i,side,x0,y0,x1,y1,ids,id0,D,Wd,nm,area:(x1-x0)*(y1-y0)/1e6,inner:W2?[x0,y0+d,x1-d,y1-d]:[x0+d,y0,x1-d,y1-d]});M.AX=Math.max(M.AX,x1);M.BY=Math.max(M.BY,y1)});
+  M.extPerim=2*(A+B)+M.wings.reduce((t,k)=>t+2*k.D+k.Wd,0);
   /* ростверк и сваи */
   M.nMid=P.beamsMid==='auto'?autoMid(P):Math.max(0,n(P.beamsMid)||0);
   M.yMid=[]; for(let i=1;i<=M.nMid;i++) M.yMid.push(bb/2+i*(B-bb)/(M.nMid+1));
@@ -601,6 +609,18 @@ function build(P,OPT={}){
     {id:'Y4',kind:'extY',axis:'y',c:xL,pts:ysP,name:'Балка под стеной 4'},
     {id:'Y2',kind:'extY',axis:'y',c:xR,pts:ysP,name:'Балка под стеной 2'}
   ];
+  /* фундамент под крыльями: балки под стенами крыла и промежуточные по расчёту лаг; на стыке — балка основного дома */
+  M.wings.forEach(k=>{const W2=k.side==='W2',yA=W2?k.y0+bb/2:yT,yB=k.y1-bb/2,xa=W2?xR:k.x0+bb/2,xb=k.x1-bb/2;
+    let nW=4;for(let q=0;q<=4;q++){const L=(yB-yA)/(q+1);if(L<=6000&&joistCheck(P,L).u<=1){nW=q;break}}
+    const yM=[...Array(nW)].map((_,q)=>yA+(q+1)*(yB-yA)/(nW+1)),lj=(yB-yA)/(nW+1);
+    const xsW=div(xa,xb),ysK=[yA,...yM,yB];let ysW=[yA];for(let q=0;q<ysK.length-1;q++)ysW.push(...div(ysK[q],ysK[q+1]).slice(1));
+    const tg='Крыло '+(k.i+1)+': ',xl=[];
+    if(W2)xl.push({c:yA,kind:'extX',name:tg+'балка под боковой стеной'});
+    xl.push({c:yB,kind:'extX',name:tg+(W2?'балка под боковой стеной':'балка под торцевой стеной')});
+    yM.forEach((y,q)=>xl.push({c:y,kind:'mid',name:tg+'промежуточная балка '+(q+1)}));
+    xl.forEach((l,q)=>M.lines.push({id:'K'+(k.i+1)+'X'+(q+1),axis:'x',pts:xsW,lj,wing:k.i,...l}));
+    (W2?[{c:xb,name:tg+'балка под торцевой стеной'}]:[{c:xa,name:tg+'балка под боковой стеной'},{c:xb,name:tg+'балка под боковой стеной'}]).forEach((l,q)=>M.lines.push({id:'K'+(k.i+1)+'Y'+(q+1),kind:'extY',axis:'y',pts:ysW,lj,wing:k.i,...l}));
+    k.grill={yA,yB,xa,xb,yM,xsW,ysW,lj,nMid:nW}});
   M.lines.forEach(l=>{l.span=Math.max(...l.pts.slice(1).map((p,i)=>p-l.pts[i]))});
   const pm=new Map();
   M.lines.forEach(l=>l.pts.forEach(p=>{const x=l.axis==='x'?p:l.c,y=l.axis==='x'?l.c:p,k=R(x)+'_'+R(y);if(!pm.has(k))pm.set(k,{x,y,key:k})}));
@@ -619,12 +639,20 @@ function build(P,OPT={}){
   [yB,yT].forEach(y=>gbar(0,y,A,y,xsP));
   M.yMid.forEach(y=>gbar(bb,y,A-bb,y,xsP));
   [xL,xR].forEach(x=>gbar(x,bb,x,B-bb,ysP));
+  M.wings.forEach(k=>{const g=k.grill,W2=k.side==='W2';
+    if(W2){[g.yA,g.yB].forEach(y=>gbar(A,y,k.x1,y,g.xsW));g.yM.forEach(y=>gbar(A,y,k.x1-bb,y,g.xsW));gbar(g.xb,k.y0+bb,g.xb,k.y1-bb,g.ysW)}
+    else{gbar(k.x0,g.yB,k.x1,g.yB,g.xsW);g.yM.forEach(y=>gbar(k.x0+bb,y,k.x1-bb,y,g.xsW));[g.xa,g.xb].forEach(x=>gbar(x,B,x,k.y1-bb,g.ysW))}});
 
   /* пол */
   const zj=H0+hb+hj/2;
   M.xsJ=grid(bj/2,A-bj/2,sj,bj,0);
   [bj/2,B-bj/2].forEach(y=>bar('floor','ОБ',[bj,hj],1,[0,y,zj],[A,y,zj],[0,0,1],hj,bj,{splitAt:rel(M.xsJ,0)}));
   M.xsJ.forEach(x=>bar('floor','Л',[bj,hj],1,[x,bj,zj],[x,B-bj,zj],[0,0,1],hj,bj,{splitAt:rel(M.yMid,bj)}));
+  M.wings.forEach(k=>{const g=k.grill;
+    if(k.side==='W2'){const xs=grid(A+bj/2,k.x1-bj/2,sj,bj,0);[k.y0+bj/2,k.y1-bj/2].forEach(y=>bar('floor','ОБ',[bj,hj],1,[A,y,zj],[k.x1,y,zj],[0,0,1],hj,bj,{splitAt:rel(xs,A)}));
+      xs.forEach(x=>bar('floor','Л',[bj,hj],1,[x,k.y0+bj,zj],[x,k.y1-bj,zj],[0,0,1],hj,bj,{splitAt:rel(g.yM,k.y0+bj)}));k.xsJ=xs}
+    else{const xs=grid(k.x0+bj/2,k.x1-bj/2,sj,bj,0);bar('floor','ОБ',[bj,hj],1,[k.x0,k.y1-bj/2,zj],[k.x1,k.y1-bj/2,zj],[0,0,1],hj,bj,{splitAt:rel(xs,k.x0)});
+      xs.forEach(x=>bar('floor','Л',[bj,hj],1,[x,B,zj],[x,k.y1-bj,zj],[0,0,1],hj,bj,{splitAt:rel(g.yM,B)}));k.xsJ=xs}});
 
   /* стены */
   const mkW=(id,name,x0,y0,ux,uy,L,origin,ext,dd,s,bearing)=>({id,name,x0,y0,ux,uy,L,origin,ext,d:dd,b,s,bearing,ops:[],extra:[]});
@@ -633,20 +661,12 @@ function build(P,OPT={}){
   M.walls.push(mkW('W2','Стена 2',A-d/2,d,0,1,B-2*d,-d,true,d,ss,false));
   M.walls.push(mkW('W3','Стена 3',0,B-d/2,1,0,A,0,true,d,ss,true));
   M.walls.push(mkW('W4','Стена 4',d/2,d,0,1,B-2*d,-d,true,d,ss,false));
-  /* крылья (Г- и Т-образный план): прямоугольный блок примыкает к стене 2 или 3 основного дома.
-     Стена основного дома на стыке остаётся — она становится внутренней несущей стеной. */
-  M.wings=[];M.AX=A;M.BY=B;
-  (P.blocks||[]).forEach((bk,i)=>{const side=bk.side==='W3'?'W3':'W2',off=n(bk.off),Wd=n(bk.w),D=n(bk.depth),Ls=side==='W2'?B:A,nm='крыло '+(i+1),id0=5+3*i,ids=[0,1,2].map(k=>'W'+(id0+k));
-    if(!(Wd>=2000&&D>=1500&&off>=0&&off+Wd<=Ls+1)){M.errs.push({wall:'K'+(i+1),msg:`Крыло ${i+1} не построено: ширина должна быть от 2000 мм, вынос от 1500 мм, и крыло должно помещаться вдоль стены ${side.slice(1)} (её длина ${Ls} мм)`});return}
-    let x0,y0,x1,y1,ws,inner;
-    if(side==='W2'){x0=A;x1=A+D;y0=off;y1=off+Wd;
-      ws=[mkW(ids[0],`Стена ${id0} (${nm}, боковая)`,x0,y0+d/2,1,0,D,0,true,d,ss,false),mkW(ids[1],`Стена ${id0+1} (${nm}, торцевая)`,x1-d/2,y0+d,0,1,Wd-2*d,-d,true,d,ss,false),mkW(ids[2],`Стена ${id0+2} (${nm}, боковая)`,x0,y1-d/2,1,0,D,0,true,d,ss,false)];
-      ws[0].inw=[0,1];ws[1].inw=[-1,0];ws[2].inw=[0,-1];inner=[x0,y0+d,x1-d,y1-d]}
-    else{x0=off;x1=off+Wd;y0=B;y1=B+D;
-      ws=[mkW(ids[0],`Стена ${id0} (${nm}, боковая)`,x0+d/2,y0,0,1,D-d,0,true,d,ss,false),mkW(ids[1],`Стена ${id0+1} (${nm}, торцевая)`,x0,y1-d/2,1,0,Wd,0,true,d,ss,false),mkW(ids[2],`Стена ${id0+2} (${nm}, боковая)`,x1-d/2,y0,0,1,D-d,0,true,d,ss,false)];
-      ws[0].inw=[1,0];ws[1].inw=[0,-1];ws[2].inw=[-1,0];inner=[x0+d,y0,x1-d,y1-d]}
-    ws.forEach(w=>{w.wing=i;M.walls.push(w)});M.wings.push({i,side,x0,y0,x1,y1,inner,ids,D,Wd,nm,area:(x1-x0)*(y1-y0)/1e6});M.AX=Math.max(M.AX,x1);M.BY=Math.max(M.BY,y1)});
-  M.extPerim=2*(A+B)+M.wings.reduce((t,k)=>t+2*k.D+k.Wd,0);
+  M.wings.forEach(k=>{const {x0,y0,x1,y1,ids,id0,D,Wd,nm}=k;let ws;
+    if(k.side==='W2'){ws=[mkW(ids[0],`Стена ${id0} (${nm}, боковая)`,x0,y0+d/2,1,0,D,0,true,d,ss,false),mkW(ids[1],`Стена ${id0+1} (${nm}, торцевая)`,x1-d/2,y0+d,0,1,Wd-2*d,-d,true,d,ss,false),mkW(ids[2],`Стена ${id0+2} (${nm}, боковая)`,x0,y1-d/2,1,0,D,0,true,d,ss,false)];
+      ws[0].inw=[0,1];ws[1].inw=[-1,0];ws[2].inw=[0,-1]}
+    else{ws=[mkW(ids[0],`Стена ${id0} (${nm}, боковая)`,x0+d/2,y0,0,1,D-d,0,true,d,ss,false),mkW(ids[1],`Стена ${id0+1} (${nm}, торцевая)`,x0,y1-d/2,1,0,Wd,0,true,d,ss,false),mkW(ids[2],`Стена ${id0+2} (${nm}, боковая)`,x1-d/2,y0,0,1,D-d,0,true,d,ss,false)];
+      ws[0].inw=[1,0];ws[1].inw=[0,-1];ws[2].inw=[-1,0]}
+    ws.forEach(w=>{w.wing=k.i;M.walls.push(w)})});
   const dp=n(P.partH), ps=Math.max(300,n(P.partS));
   (P.walls||[]).forEach((iw,i)=>{
     const id='I'+(i+1);
@@ -872,12 +892,13 @@ function calc(M){
   const roofG=l.gR/cs*trR,attG=l.gA*attTrib,wallG=l.gW*M.H/1000,gabG=l.gW*gabH/1000,supAttG=M.attSup!=null?l.gA*((M.attSup-M.d/2)/2+(M.B-M.d/2-M.attSup)/2)/1000:0;
   M.lines.forEach(L=>{
     let qd=bself*1.1,qn=bself,qg=bself;
-    if(L.kind==='extX')qg+=l.gF*M.Lj/2000+wallG+roofG+attG;else if(L.kind==='extY')qg+=l.gF*M.sj/2000+wallG+gabG;
-    else{qg+=l.gF*M.Lj/1000;const iw=M.walls.find(w=>!w.ext&&w.ux&&Math.abs(w.y0-L.c)<=300);if(iw){qg+=(iw.bearing?l.gW:.3)*M.H/1000;if(M.attSup!=null&&Math.abs(M.attSup-iw.y0)<1)qg+=supAttG}}
+    const lj=L.lj??M.Lj,rf=L.wing!=null?0:1;
+    if(L.kind==='extX')qg+=l.gF*lj/2000+wallG+rf*(roofG+attG);else if(L.kind==='extY')qg+=l.gF*M.sj/2000+wallG+rf*gabG;
+    else{qg+=l.gF*lj/1000;const iw=M.walls.find(w=>!w.ext&&w.ux&&Math.abs(w.y0-L.c)<=300);if(iw){qg+=(iw.bearing?l.gW:.3)*M.H/1000;if(M.attSup!=null&&Math.abs(M.attSup-iw.y0)<1)qg+=supAttG}}
     L.qg=qg;
-    if(L.kind==='extX'){qd+=fl*M.Lj/2000+wallD+roofD+attD;qn+=fln*M.Lj/2000+wallN+roofN+attN}
-    else if(L.kind==='extY'){qd+=fl*M.sj/2000+wallD+gabD;qn+=fln*M.sj/2000+wallN+gabN}
-    else{qd+=fl*M.Lj/1000;qn+=fln*M.Lj/1000;
+    if(L.kind==='extX'){qd+=fl*lj/2000+wallD+rf*(roofD+attD);qn+=fln*lj/2000+wallN+rf*(roofN+attN)}
+    else if(L.kind==='extY'){qd+=fl*M.sj/2000+wallD+rf*gabD;qn+=fln*M.sj/2000+wallN+rf*gabN}
+    else{qd+=fl*lj/1000;qn+=fln*lj/1000;
       const iw=M.walls.find(w=>!w.ext&&w.ux&&Math.abs(w.y0-L.c)<=300);
       if(iw){const g=iw.bearing?l.gW:.3;qd+=g*1.2*M.H/1000;qn+=g*M.H/1000;if(M.attSup!=null&&Math.abs(M.attSup-iw.y0)<1){qd+=supAtt;qn+=supAttN}L.wallOver=iw.id}}
     L.qd=qd;L.qn=qn;
@@ -982,9 +1003,9 @@ function hCalc(M,l,pc,g){
   return {Fx,Fy,hx,hy,walls,checks:out,ov};
 }
 function vSummary(M,l){
-  const A=M.A/1000,B=M.B/1000,roofA=M.roofArea,plan=(M.A+2*M.og)*(M.B+2*M.ov)/1e6,wallA=2*(A+B)*M.H/1000+M.walls.filter(w=>!w.ext&&w.zb==null).reduce((s,w)=>s+w.L/1000*M.H/1000,0);
+  const A=M.A/1000,B=M.B/1000,FA=A*B+(M.wings||[]).reduce((t,k)=>t+k.area,0),roofA=M.roofArea,plan=(M.A+2*M.og)*(M.B+2*M.ov)/1e6,wallA=(M.extPerim||2*(M.A+M.B))/1000*M.H/1000+M.walls.filter(w=>!w.ext&&w.zb==null).reduce((s,w)=>s+w.L/1000*M.H/1000,0);
   const rows=[['Кровля: покрытие, обрешётка, стропила',l.gR*roofA,1.1],['Снег',l.S*plan,1.4],[M.mans?'Перекрытие и мансарда: вес':'Чердачное перекрытие: вес',l.gA*A*B,1.2],[M.mans?'Мансарда: полезная':'Чердак: полезная',l.pA*A*B,1.3],
-    ['Стены и перегородки',l.gW*wallA,1.2],['Пол первого этажа: вес',l.gF*A*B,1.2],['Пол: полезная',l.pF*A*B,1.3]];
+    ['Стены и перегородки',l.gW*wallA,1.2],['Пол первого этажа: вес',l.gF*FA,1.2],['Пол: полезная',l.pF*FA,1.3]];
   const grill=M.mem.filter(m=>m.grp==='grill').reduce((s,m)=>s+SELF*m.sec[0]*m.sec[1]*m.L*m.n/1000,0);
   rows.push(['Ростверк',grill,1.1]);
   return rows.map(([n,v,k])=>({n,norm:v,des:v*k}));
@@ -1103,7 +1124,7 @@ function spec(M,C){
   const gabA=M.gable?(B*B/2*M.tn)/1e6:(B*B*M.tn)/1e6+A*M.Hr/1e6;
   const wallG=(M.extPerim||2*(A+B))*H/1e6, wallNet=wallG-opsA;
   const parts=M.walls.filter(w=>!w.ext), partA=parts.reduce((s,w)=>s+w.L*H,0)/1e6-M.ops.filter(o=>o.ok&&!M.walls.find(w=>w.id===o.wall)?.ext).reduce((s,o)=>s+o.w*o.h,0)/1e6;
-  const floorA=A*B/1e6, roofA=M.roofArea;
+  const wingA=(M.wings||[]).reduce((t,k)=>t+k.area,0),floorA=A*B/1e6+wingA, roofA=M.roofArea;
   const insW=wallNet*d/1000*(1-M.b/(+P.studS)), insF=floorA*M.hj/1000*(1-M.bj/M.sj), insA=floorA*M.ha/1000*(1-M.ba/M.sr), insP=Math.max(0,partA)*(+P.partH)/1000*(1-M.b/(+P.partS));
   const sheet=3.125;
   const SM=SHEATH[P.sheathMat]||SHEATH.osb9;
@@ -1150,7 +1171,7 @@ function advice(M,C,S){
   const P=M.P,l=C.l,out=[];
   const add=(lvl,title,text,patch,pid)=>out.push({lvl,title,text,patch,pid});
   M.errs.forEach(e=>add('bad',e.msg,/^K/.test(e.wall)?'Исправьте размеры в шаге «Крылья дома».':'Проверьте координату и границы перегородки во вкладке «Внутренние стены».'));
-  if(M.wings&&M.wings.length) add('warn','Крылья дома: построены стены','Для крыльев пока построены наружные стены, проёмы, помещения и 3D каркаса. Сваи, ростверк, пол и крыша крыла добавляются следующими шагами — до этого смета и расчёт учитывают только основной дом (кроме стен и ветра). Стена основного дома на стыке остаётся внутренней несущей стеной — в ней можно сделать дверной проём.');
+  if(M.wings&&M.wings.length) add('warn','Крылья дома: пока без крыши','Для крыльев построены наружные стены, проёмы, помещения, сваи, ростверк и пол — они входят в расчёт, спецификацию и смету. Крыша крыла добавляется следующим шагом: до этого балки ростверка крыла считаются без нагрузки от кровли. Стена основного дома на стыке остаётся внутренней несущей стеной — в ней можно сделать дверной проём.');
   M.ops.filter(o=>!o.ok).forEach(o=>add('bad',`Проём №${o.i+1} на стене ${o.wall} не построен`,o.msg+'.'));
   C.checks.forEach(c=>{
     if(!c.ok){const p=pickFor(c.id);add('bad',`${c.title} не проходит по расчёту (${R(c.u*100)} %)`,p?`Подходит: ${describePatch(c.id,p)}. Можно также уменьшить шаг или пролёт.`:'Подходящего стандартного сечения не нашлось: уменьшите шаг, пролёт или добавьте опору.',p,c.id)}
@@ -1489,7 +1510,7 @@ function renderBlocks(){
     <button class="x" data-del="${i}" aria-label="Удалить крыло">×</button>
     <div class="note" style="grid-column:1/-1">Стены крыла: ${id0}, ${id0+1}, ${id0+2}${M?.errs?.some(e=>e.wall==='K'+(i+1))?' · <b style="color:var(--bad)">не построено — проверьте размеры</b>':''}</div></div>`});
   h+=`</div><div class="btns" style="padding-bottom:12px"><button class="btn sm" id="addBK">+ крыло</button></div>
-  <div class="hint" style="padding-bottom:10px">Крыло — прямоугольная пристройка к стене 2 (справа) или 3 (сзади): одно крыло даёт Г-образный дом, крыло в середине стены — Т-образный. Отступ — от начала стены (стена 2 — от стены 1, стена 3 — от стены 4), ширина — вдоль стены, вынос — от стены наружу, наружные размеры. Стена основного дома на стыке остаётся внутренней — добавьте в ней дверь. Сейчас для крыла строятся стены, проёмы и помещения; фундамент, пол и крыша — следующий этап.</div>`;
+  <div class="hint" style="padding-bottom:10px">Крыло — прямоугольная пристройка к стене 2 (справа) или 3 (сзади): одно крыло даёт Г-образный дом, крыло в середине стены — Т-образный. Отступ — от начала стены (стена 2 — от стены 1, стена 3 — от стены 4), ширина — вдоль стены, вынос — от стены наружу, наружные размеры. Стена основного дома на стыке остаётся внутренней — добавьте в ней дверь. Для крыла строятся стены, проёмы, помещения, сваи, ростверк и пол; крыша — следующий этап.</div>`;
   el.innerHTML=h;const sm=$('#sum-blocks');if(sm)sm.textContent=P.blocks.length?P.blocks.length+' шт':'нет';
   el.querySelectorAll('.row.bk').forEach(r=>{const i=+r.dataset.i;r.querySelectorAll('[data-f]').forEach(inp=>inp.addEventListener('change',()=>{const f=inp.dataset.f;let v=inp.value;if(f!=='side'){v=parseFloat(v);if(!Number.isFinite(v))return}P.blocks[i][f]=v;schedule(true)}))});
   el.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click',()=>{const i=+b.dataset.del,id0=5+3*i;P.blocks.splice(i,1);
@@ -1723,10 +1744,10 @@ const markRows=(pred)=>S.marks.filter(pred).map(g=>[g.mark,ROLE[g.role],g.sec.jo
 const MARK_COLS=[{t:'Марка',w:12},{t:'Наименование',w:44,a:'start'},{t:'Сечение',w:16},{t:'Длина',w:14},{t:'Шт',w:10}];
 
 function sheetPiles(){
-  const {A,B}=M,mL=34,mB=34,mT=14,mR=10,s=fit(A,B,385-mL-mR,222-mT-mB);
+  const A=M.AX||M.A,B=M.BY||M.B,mL=34,mB=34,mT=14,mR=10,s=fit(A,B,385-mL-mR,222-mT-mB);
   const w=A/s,h=B/s,px0=25+mL+(385-mL-mR-w)/2,py0=10+mT+(222-mT-mB-h)/2;
   const X=x=>px0+x/s,Y=y=>py0+(B-y)/s;let g=Tx(25+385/2,16,`План свайного поля  М 1:${s}`,{size:3.5,cls:'b'});
-  g+=Rc(X(0),Y(B),w,h,'hd');
+  [[0,0,M.A,M.B],...(M.wings||[]).map(k=>[k.x0,k.y0,k.x1,k.y1])].forEach(r=>g+=Rc(X(r[0]),Y(r[3]),(r[2]-r[0])/s,(r[3]-r[1])/s,'hd'));
   M.mem.filter(m=>m.grp==='grill').forEach(m=>{const hw=m.sz/2/s;if(Math.abs(m.p1[0]-m.p0[0])>1)g+=Rc(X(m.p0[0]),Y(m.p0[1])-hw,(m.p1[0]-m.p0[0])/s,2*hw,'ctx');else g+=Rc(X(m.p0[0])-hw,Y(m.p1[1]),2*hw,(m.p1[1]-m.p0[1])/s,'ctx')});
   const xsU=[...new Set(M.piles.map(p=>R(p.x)))].sort((a,c)=>a-c),ysU=[...new Set(M.piles.map(p=>R(p.y)))].sort((a,c)=>a-c);
   xsU.forEach((x,i)=>{g+=Ln(X(x),Y(B)-4,X(x),Y(0)+25,'ax');g+=bubble(X(x),Y(0)+28.6,i+1)});
@@ -1748,7 +1769,7 @@ function sheetPiles(){
   return {code:'Ф-1',title:'План свайного поля',sub:`Свай ${M.piles.length} шт, ${M.pileT.short}, L=${M.pileLen}`,scale:s,body:g};
 }
 function sheetGrill(){
-  const {A,B}=M,mL=26,mB=26,mT=14,mR=10,s=fit(A,B,385-mL-mR,222-mT-mB);
+  const A=M.AX||M.A,B=M.BY||M.B,mL=26,mB=26,mT=14,mR=10,s=fit(A,B,385-mL-mR,222-mT-mB);
   const w=A/s,h=B/s,px0=25+mL+(385-mL-mR-w)/2,py0=10+mT+(222-mT-mB-h)/2;
   const X=x=>px0+x/s,Y=y=>py0+(B-y)/s;let g=Tx(25+385/2,16,`План ростверка и лаг пола  М 1:${s}`,{size:3.5,cls:'b'});
   const planRect=(m,c)=>{const hw=m.sz/2/s;if(Math.abs(m.p1[0]-m.p0[0])>1)return Rc(X(Math.min(m.p0[0],m.p1[0])),Y(m.p0[1])-hw,Math.abs(m.p1[0]-m.p0[0])/s,2*hw,c);return Rc(X(m.p0[0])-hw,Y(Math.max(m.p0[1],m.p1[1])),2*hw,Math.abs(m.p1[1]-m.p0[1])/s,c)};
@@ -1905,7 +1926,7 @@ function sheetRoof(){
   const Xs=y=>pxS+(y-yMin)/s,Zs=z=>pyS+(zMax-z)/s;
   let g=Tx(pxS+Wsec/s/2,17,`Разрез 1-1  М 1:${s}`,{size:3.4,cls:'b'});
   g+=Ln(Xs(yMin),Zs(0),Xs(yMax),Zs(0),'gnd');for(let y=yMin;y<yMax;y+=300*s/50*1.2)g+=Ln(Xs(y),Zs(0)+.2,Xs(y)-1.6,Zs(0)+1.8);
-  M.lines.filter(l=>l.axis==='x').forEach(l=>{g+=Rc(Xs(l.c-M.pileD/2),Zs(M.H0),M.pileD/s,(M.H0-zMin)/s,'pile');g+=Pl([[Xs(l.c-M.pileD),Zs(zMin)],[Xs(l.c)-.8,Zs(zMin)-1],[Xs(l.c)+.8,Zs(zMin)+1],[Xs(l.c+M.pileD),Zs(zMin)]],'t');
+  M.lines.filter(l=>l.axis==='x'&&l.wing==null).forEach(l=>{g+=Rc(Xs(l.c-M.pileD/2),Zs(M.H0),M.pileD/s,(M.H0-zMin)/s,'pile');g+=Pl([[Xs(l.c-M.pileD),Zs(zMin)],[Xs(l.c)-.8,Zs(zMin)-1],[Xs(l.c)+.8,Zs(zMin)+1],[Xs(l.c+M.pileD),Zs(zMin)]],'t');
     g+=Rc(Xs(l.c-M.bb/2),Zs(M.H0+M.hb),M.bb/s,M.hb/s,'w2')+Ln(Xs(l.c-M.bb/2),Zs(M.H0),Xs(l.c+M.bb/2),Zs(M.H0+M.hb))+Ln(Xs(l.c-M.bb/2),Zs(M.H0+M.hb),Xs(l.c+M.bb/2),Zs(M.H0))});
   g+=Rc(Xs(0),Zs(M.H0+M.hb+M.hj),B/s,M.hj/s,'w');g+=Rc(Xs(0),Zs(M.z0),B/s,(M.z0-M.H0-M.hb-M.hj)/s,'w2');
   [[0,M.d],[B-M.d,B]].forEach(([a,e])=>g+=Rc(Xs(a),Zs(M.zt),(e-a)/s,M.H/s,'wl'));
@@ -1918,7 +1939,7 @@ function sheetRoof(){
   if(M.gable)g+=Rc(Xs(B/2-br/2),Zs(M.zRidge),br/s,hr/s,'w3');
   M.strutY.forEach(y=>g+=Rc(Xs(y-br/2),Zs(M.zU(y)),br/s,(M.zU(y)-M.zr0)/s,'w3'));
   const a0=Xs(0)+(M.gable?14:16),z0p=Zs(M.zr0);g+=`<path d="M${f2(Xs(0)+12)} ${f2(z0p)} A12 12 0 0 0 ${f2(Xs(0)+12*Math.cos(M.al))} ${f2(z0p-12*Math.sin(M.al))}" class="t"/>`+Ln(Xs(0),z0p,Xs(0)+15,z0p)+Tx(a0+1,z0p-2,`${M.deg}°`,{size:2.4,a:'start'});
-  g+=chainH([-ov,0,B,B+ov],Xs,Zs(zMin)+7,null);g+=chainH([0,...M.lines.filter(l=>l.axis==='x').map(l=>l.c),B],Xs,Zs(zMin)+15,null);
+  g+=chainH([-ov,0,B,B+ov],Xs,Zs(zMin)+7,null);g+=chainH([0,...M.lines.filter(l=>l.axis==='x'&&l.wing==null).map(l=>l.c),B],Xs,Zs(zMin)+15,null);
   g+=chainV([0,M.H0,M.z0,M.zt,M.zr0,...(M.mans&&M.mansOk?[M.zm,M.zm+M.kneeH,M.zc]:[]),R(M.zRidge)],Zs,Xs(yMin)-7,Xs(yMin)+2);
   [[0,'земля'],[M.H0,'оголовки'],[M.z0,'пол'],[M.zt,'верх стен'],...(M.mans&&M.mansOk?[[M.zm,'пол мансарды'],[M.zc,'потолок мансарды']]:[]),[R(M.zRidge),'конёк']].forEach(([z,t])=>g+=elev(Xs(yMax)-2,Zs(z),elvTxt(z-M.z0)+' '+t));
   // план стропил
