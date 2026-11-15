@@ -444,6 +444,7 @@ const DEF={
     {wall:'I1',type:'door',x:6000,w:900,h:2100,sill:0},
     {wall:'I2',type:'door',x:800,w:800,h:2100,sill:0}
   ],
+  rooms:[],
   walls:[
     {axis:'x',c:3500,from:0,to:9000,bearing:true},
     {axis:'y',c:4500,from:3550,to:7000,bearing:false}
@@ -454,7 +455,7 @@ function loadP(){try{const s=localStorage.getItem(LS_KEY);if(s){const o=JSON.par
 function normalize(o){const p=Object.assign(clone(DEF),o);
   if(!o.lumber)p.lumber='edged';if(!Array.isArray(o.db)||!o.db.length)p.db=defaultDB();
   if(!o.beamType){if(+o.beamPly>1){p.beamType='pack';p.packB=R(+o.beamB/+o.beamPly);p.packH=+o.beamH}else{p.beamType='brus';p.beamPly=3}}
-  if(!o.sheathMat)p.sheathMat=+o.wallOsb===12?'osb12':'osb9';p.prices=Object.assign(clone(DEF.prices),o.prices||{});if(!Array.isArray(p.openings))p.openings=[];if(!Array.isArray(p.walls))p.walls=[];return p}
+  if(!o.sheathMat)p.sheathMat=+o.wallOsb===12?'osb12':'osb9';p.prices=Object.assign(clone(DEF.prices),o.prices||{});if(!Array.isArray(p.openings))p.openings=[];if(!Array.isArray(p.walls))p.walls=[];if(!Array.isArray(p.rooms))p.rooms=[];return p}
 function saveP(){try{localStorage.setItem(LS_KEY,JSON.stringify(P))}catch(e){}}
 let P=loadP();
 
@@ -737,7 +738,36 @@ function build(P,OPT={}){
     bar('lath','ЛД',[25,150],1,[-og,ye,ze],[A+og,ye,ze],[0,0,1],150,25,{splitAt:rel([...xsR,...barge],-og)});
   });
   M.roofArea=slopes.reduce((s,sl)=>s+sl.len*(A+2*og),0)/1e6;
+  M.rooms=detectRooms(M,P);
   return M;
+}
+/* ---------- АР: помещения ---------- */
+const ROOM_KIND={living:'жилое',aux:'подсобное',tech:'техническое'};
+/* помещения ищутся по стенам: внутренний контур режется гранями перегородок на прямоугольные ячейки, свободные соседние ячейки объединяются */
+function detectRooms(M,P){
+  const d=M.d,A=M.A,B=M.B,obs=[];
+  M.walls.filter(w=>!w.ext&&w.zb==null).forEach(w=>{const x0=w.x0-(w.uy?w.d/2:0),y0=w.y0-(w.ux?w.d/2:0),x1=w.ux?w.x0+w.L:w.x0+w.d/2,y1=w.uy?w.y0+w.L:w.y0+w.d/2;const tol=40;obs.push(w.ux?[x0-tol,y0,x1+tol,y1]:[x0,y0-tol,x1,y1+tol])}); /* допуск на примыкание: торец перегородки, не доведённый до стены на 40 мм, считается примкнувшим */
+  const cut=(lo,hi,vals)=>[...new Set([lo,hi,...vals.filter(v=>v>lo+1&&v<hi-1)].map(v=>Math.round(v)))].sort((a,c)=>a-c);
+  const xs=cut(d,A-d,obs.flatMap(o=>[o[0],o[2]])),ys=cut(d,B-d,obs.flatMap(o=>[o[1],o[3]]));
+  const nx=xs.length-1,ny=ys.length-1,id=(i,j)=>j*nx+i,par=[...Array(nx*ny).keys()];
+  const fnd=a=>{while(par[a]!==a){par[a]=par[par[a]];a=par[a]}return a},uni=(a,c)=>{a=fnd(a);c=fnd(c);if(a!==c)par[c]=a};
+  const free=[];for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){const cx=(xs[i]+xs[i+1])/2,cy=(ys[j]+ys[j+1])/2;free[id(i,j)]=!obs.some(o=>cx>o[0]&&cx<o[2]&&cy>o[1]&&cy<o[3])}
+  for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){if(!free[id(i,j)])continue;if(i+1<nx&&free[id(i+1,j)])uni(id(i,j),id(i+1,j));if(j+1<ny&&free[id(i,j+1)])uni(id(i,j),id(i,j+1))}
+  const reg=new Map();
+  for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){const k=id(i,j);if(!free[k])continue;const r=fnd(k);if(!reg.has(r))reg.set(r,{cells:[],area:0,best:null});const g=reg.get(r),c=[xs[i],ys[j],xs[i+1],ys[j+1]],a=(c[2]-c[0])*(c[3]-c[1]);g.cells.push(c);g.area+=a;if(!g.best||a>g.best.a)g.best={a,c}}
+  const out=[...reg.values()].filter(g=>g.area>=.3e6).map(g=>({cells:g.cells,area:g.area/1e6,x:R((g.best.c[0]+g.best.c[2])/2),y:R((g.best.c[1]+g.best.c[3])/2),
+    x0:Math.min(...g.cells.map(c=>c[0])),y0:Math.min(...g.cells.map(c=>c[1])),x1:Math.max(...g.cells.map(c=>c[2])),y1:Math.max(...g.cells.map(c=>c[3]))}));
+  out.sort((a,c)=>(c.y1-a.y1)||(a.x0-c.x0));
+  const inR=(r,x,y)=>r.cells.some(c=>x>=c[0]-1&&x<=c[2]+1&&y>=c[1]-1&&y<=c[3]+1),used=new Set();
+  out.forEach((r,i)=>{r.no=i+1;const k=(P.rooms||[]).findIndex((q,qi)=>!used.has(qi)&&inR(r,+q.x,+q.y));
+    if(k>=0){used.add(k);const q=P.rooms[k];r.ref=k;r.name=q.name||('Помещение '+r.no);r.kind=ROOM_KIND[q.kind]?q.kind:'aux'}else{r.ref=-1;r.name='Помещение '+r.no;r.kind='aux'}});
+  return out;
+}
+function tep(M){
+  const rs=M.rooms||[],tot=rs.reduce((s,r)=>s+r.area,0),liv=rs.filter(r=>r.kind==='living').reduce((s,r)=>s+r.area,0);
+  const mans=M.mans&&M.mansOk?M.mansArea:0,build=M.A*M.B/1e6;
+  const hRoof=M.gable?(M.zRidge-M.zr0):(M.Hr||0),vol=build*((M.zt+M.ha-M.H0)/1000)+M.A*M.B*hRoof/2/1e9;
+  return {build,tot,liv,mans,total:tot+mans,vol,floors:M.mans&&M.mansOk?'1 + мансарда':'1'}
 }
 
 /* сплошные участки стены (без проёмов и стоек обрамления) */
@@ -1242,6 +1272,7 @@ const FORM=[
     {hint:'Укосины ставятся под 45–60° на сплошных участках стены, в каждой стене — обоих направлений. Если по СНиП им не хватает места (мешают проёмы), стена автоматически получает плитную обшивку. Фронтоны обшиваются всегда.'}]},
   {id:'ops',t:'5 · Окна и двери',custom:'ops'},
   {id:'iw',t:'6 · Перегородки',custom:'iw'},
+  {id:'rooms',t:'6а · Помещения (АР)',custom:'rooms'},
   {id:'found',t:'3 · Фундамент и пол',f:[
     {k:'pile',l:'Свая',type:'sel',opts:opt(PILES),wide:true},
     {k:'pileFd',l:'Несущая способность сваи',u:'кН',min:5,max:300,step:1,show:()=>P.pile==='manual'},
@@ -1307,7 +1338,7 @@ const FORM=[
     {hint:'Цены примерные — впишите свои из прайса поставщика.'}]},
   {id:'file',t:'Файл проекта',custom:'file'}
 ];
-const F_ORDER=['site','house','found','walls','ops','iw','roof','loads','cutp','prices','file'];FORM.sort((a,c)=>F_ORDER.indexOf(a.id)-F_ORDER.indexOf(c.id));
+const F_ORDER=['site','house','found','walls','ops','iw','rooms','roof','loads','cutp','prices','file'];FORM.sort((a,c)=>F_ORDER.indexOf(a.id)-F_ORDER.indexOf(c.id));
 const getK=k=>k.split('.').reduce((o,x)=>o?.[x],P);
 const setK=(k,v)=>{const p=k.split('.');let o=P;for(let i=0;i<p.length-1;i++)o=o[p[i]];o[p.at(-1)]=v};
 
@@ -1354,7 +1385,7 @@ function renderSide(){
       if(k==='roof'||k==='mansard'){setTimeout(()=>{renderSide();},0)}
       schedule();
     })});
-  renderOps(); renderIW(); renderFile(); renderSite();
+  renderOps(); renderIW(); renderRooms(); renderFile(); renderSite();
   $('#tplGo').onclick=()=>{const t=TEMPLATES[$('#tplSel').value],keep={tech:P.tech,lumber:P.lumber,site:P.site,snow:P.snow,wind:P.wind,climMode:P.climMode,freeze:P.freeze,freezeAuto:P.freezeAuto,db:P.db};P=normalize(t.f());Object.assign(P,keep);{const T=TECH[P.tech];if(T&&T.def)Object.assign(P,T.def)}mapToDb();const fx=autoFix();renderSide();rebuild();$('#tplMsg').textContent='Загружен шаблон «'+t.n+'»'+(fx.length?'. Сечения подобраны по расчёту: '+fx.join('; '):'')+'. Отменить — кнопкой ↶.'};
   renderSums();
 }
@@ -1427,6 +1458,23 @@ function renderIW(){
     P.openings=P.openings.filter(o=>o.wall!==id).map(o=>{const m=/^I(\d+)$/.exec(o.wall);if(m&&+m[1]>i+1)o.wall='I'+(+m[1]-1);return o});schedule(true)}));
   $('#addIW').onclick=()=>{P.walls.push({axis:'y',c:R(P.A/3),from:0,to:P.B,bearing:false});schedule(true)};
 }
+function renderRooms(){
+  const el=$('#custom-rooms');if(!el||!M)return;if(el.contains(document.activeElement)&&document.activeElement.tagName!=='BUTTON')return;
+  const rs=M.rooms||[];
+  let h='<div class="rows">';
+  rs.forEach((r,i)=>{h+=`<div class="row rm" data-i="${i}" style="grid-template-columns:28px minmax(0,1fr) 110px;align-items:center">
+    <b class="mono" style="text-align:center">${r.no}</b>
+    <div><label for="rm${i}n">${fmt(r.area,1)} м²</label><input id="rm${i}n" type="text" data-f="name" value="${esc(r.name)}" style="font-family:var(--f-ui)"></div>
+    <div><label for="rm${i}k">Назначение</label><select id="rm${i}k" data-f="kind">${Object.entries(ROOM_KIND).map(([k,l])=>`<option value="${k}" ${k===r.kind?'selected':''}>${l}</option>`).join('')}</select></div></div>`});
+  if(!rs.length)h+='<div class="note">Помещения не найдены: проверьте размеры дома и перегородки.</div>';
+  const t=tep(M);
+  h+=`</div><div class="hint" style="padding-bottom:6px">Помещения находятся сами по наружным стенам и перегородкам. Перегородка, не доходящая до стены, объединяет помещения. Впишите названия: они появятся на плане и в экспликации (лист АР-1).</div>
+  <dl class="kv" style="padding-bottom:12px"><dt>Общая площадь этажа</dt><dd>${fmt(t.tot,1)} м²</dd><dt>Жилая площадь</dt><dd>${fmt(t.liv,1)} м²</dd>${t.mans?`<dt>Мансарда (h ≥ 1,5 м)</dt><dd>${fmt(t.mans,1)} м²</dd>`:''}<dt>Площадь застройки</dt><dd>${fmt(t.build,1)} м²</dd></dl>`;
+  el.innerHTML=h;const sm=$('#sum-rooms');if(sm)sm.textContent=rs.length+' шт · '+fmt(t.tot,1)+' м²';
+  el.querySelectorAll('.row.rm').forEach(row=>{const r=rs[+row.dataset.i];row.querySelectorAll('[data-f]').forEach(inp=>inp.addEventListener('change',()=>{
+    if(!Array.isArray(P.rooms))P.rooms=[];let q=r.ref>=0?P.rooms[r.ref]:null;if(!q){q={x:r.x,y:r.y,name:r.name,kind:r.kind};P.rooms.push(q);r.ref=P.rooms.length-1}
+    q.x=r.x;q.y=r.y;q[inp.dataset.f]=inp.value.trim()||('Помещение '+r.no);schedule()}))});
+}
 let resetArm=false;
 function renderFile(){
   const el=$('#custom-file'); if(!el) return;
@@ -1450,12 +1498,12 @@ function download(name,text,mime){const b=new Blob([text],{type:mime});const a=d
 /* ---------- состояние / пересборка ---------- */
 let M=null,C=null,S=null,ADV=null,SHEETS=null,curSheet=0,dirty3d=true;
 let timer=null;
-function schedule(structural){clearTimeout(timer);timer=setTimeout(()=>{rebuild();if(structural){renderOps();renderIW()}},structural?0:220)}
+function schedule(structural){clearTimeout(timer);timer=setTimeout(()=>{rebuild();if(structural){renderOps();renderIW()}renderRooms()},structural?0:220)}
 function rebuild(){
   try{if(enforceTech(P).includes('lumber'))mapToDb();({M,C}=buildFull(P));S=spec(M,C);ADV=advice(M,C,S)}catch(e){console.error(e);return}
   pushHistory();
   SHEETS=null; dirty3d=true; saveP();
-  renderTop(); renderSums(); renderOpsErrors(); renderActive();
+  renderTop(); renderSums(); renderOpsErrors(); renderRooms(); renderActive();
 }
 function renderOpsErrors(){document.querySelectorAll('#custom-ops .row').forEach(r=>{const i=+r.dataset.i,st=M.ops[i];let e=r.querySelector('.err');if(st&&!st.ok){if(!e){e=document.createElement('div');e.className='err';r.appendChild(e)}e.textContent=st.msg}else if(e)e.remove();
   const lab=r.querySelector('label[for="o'+i+'t"]');if(lab)lab.innerHTML='Тип'+(st?.mark?` · <span class="mk">${st.mark}</span>`:'')})}
@@ -1675,9 +1723,16 @@ function sheetGrill(){
   return {code:'Ф-2',title:'План ростверка и лаг',sub:`Промежуточных балок: ${M.nMid}, пролёт лаг ${R(M.Lj)} мм`,scale:s,body:g};
 }
 function sheetPlan(){
-  const {A,B,d}=M,mm=34,mT=14,s=fit(A,B,385-2*mm,222-mT-2*mm+8);
-  const w=A/s,h=B/s,px0=25+(385-w)/2,py0=10+mT+(222-mT-h)/2;
-  const X=x=>px0+x/s,Y=y=>py0+(B-y)/s;let g=Tx(25+385/2,16,`План стен  М 1:${s}`,{size:3.5,cls:'b'});
+  const {A,B,d}=M,EW=96,aw=385-EW,mL=46,mR=30,mT=26,mB=44,s=fit(A,B,aw-mL-mR,222-mT-mB);
+  const w=A/s,h=B/s,px0=25+mL+(aw-mL-mR-w)/2,py0=10+mT+(222-mT-mB-h)/2;
+  const X=x=>px0+x/s,Y=y=>py0+(B-y)/s;let g=Tx(25+aw/2,16,`План 1 этажа  М 1:${s}`,{size:3.5,cls:'b'});
+  /* координационные оси: по осям наружных стен и перегородок */
+  const axU=a=>[...new Set(a.map(v=>R(v)))].sort((p,q)=>p-q).filter((v,i,arr)=>!i||v-arr[i-1]>150);
+  const ax=axU([d/2,...M.walls.filter(x=>!x.ext&&x.zb==null&&x.uy).map(x=>x.x0),A-d/2]),ay=axU([d/2,...M.walls.filter(x=>!x.ext&&x.zb==null&&x.ux).map(x=>x.y0),B-d/2]);
+  ax.forEach((x,i)=>{g+=Ln(X(x),Y(B)-5,X(x),Y(0)+35,'ax')+bubble(X(x),Y(0)+38.6,i+1)});
+  ay.forEach((y,i)=>{g+=Ln(X(A)+5,Y(y),X(0)-35,Y(y),'ax')+bubble(X(0)-38.6,Y(y),AX_LET[i]||'?')});
+  /* помещения: лёгкая заливка */
+  (M.rooms||[]).forEach(r=>r.cells.forEach(c=>g+=`<rect x="${f2(X(c[0]))}" y="${f2(Y(c[3]))}" width="${f2((c[2]-c[0])/s)}" height="${f2((c[3]-c[1])/s)}" fill="${r.kind==='living'?'#F3F7F1':r.kind==='tech'?'#F6F1EA':'#F7F7F7'}" stroke="none"/>`));
   const WL=M.walls.filter(w=>w.zb==null);
   const wr=w0=>{const x0=w0.x0-(w0.uy?w0.d/2:0),y0=w0.y0-(w0.ux?w0.d/2:0),x1=w0.ux?w0.x0+w0.L:w0.x0+w0.d/2,y1=w0.uy?w0.y0+w0.L:w0.y0+w0.d/2;return [x0,y0,x1,y1]};
   WL.forEach(wl=>{const [x0,y0,x1,y1]=wr(wl);g+=Rc(X(x0),Y(y1),(x1-x0)/s,(y1-y0)/s,wl.ext?'wl':'wlp')});
@@ -1690,19 +1745,25 @@ function sheetPlan(){
     const cx=wl.ux?X((x0+x1)/2):X(wl.x0)+inw[0]*off,cy=wl.ux?Y(wl.y0)-inw[1]*off+(inw[1]<0?0:0.9):Y((y0+y1)/2);g+=Tx(cx,cy,o.mark,{size:2.2,rot:wl.uy?-90:0})})});
   WL.forEach(wl=>{const sx=X(wl.x0),sy=Y(wl.y0),dx=wl.ux*7,dy=-wl.uy*7;g+=Ln(sx,sy,sx+dx,sy+dy,'m')+Pg([[sx+dx,sy+dy],[sx+dx-wl.ux*1.8-wl.uy*.9,sy+dy+wl.uy*1.8-wl.ux*.9],[sx+dx-wl.ux*1.8+wl.uy*.9,sy+dy+wl.uy*1.8+wl.ux*.9]],'blk');
     const mx=wl.x0+wl.ux*wl.L/2,my=wl.y0+wl.uy*wl.L/2;
-    if(wl.ext){const o={W1:[0,1],W3:[0,-1],W2:[-1,0],W4:[1,0]}[wl.id];g+=bubble(X(mx)+o[0]*(wl.d/2/s+8)+(wl.ux?wl.L/s*.3:0),Y(my)-o[1]*(wl.d/2/s+8)-(wl.uy?wl.L/s*.3:0),wl.id.slice(1))}
+    if(wl.ext){g+=Tx(sx+dx+wl.ux*5.5+(wl.uy?(wl.id==='W4'?2.6:-2.6):0),sy+dy-wl.uy*5.5+(wl.ux?(wl.id==='W1'?-1.6:3.4):0),'ст.'+wl.id.slice(1),{size:2,rot:wl.uy?-90:0})}
     else g+=Tx(X(mx)+(wl.uy?3.2:wl.L/s*.2),Y(my)-(wl.ux?wl.d/2/s+1.2:-wl.L/s*.2),wl.id+(wl.bearing?' несущ.':''),{size:2.3,a:'start'})});
   const opsW=id=>{const wl=M.walls.find(x=>x.id===id);return wl.ops.filter(o=>o.ok).flatMap(o=>[o.x,o.x+o.w].map(v=>(wl.ux?wl.x0:wl.y0)+v))};
-  g+=chainH([0,M.d,...opsW('W1'),A-M.d,A],X,Y(0)+9,Y(0))+dimH(X(0),X(A),Y(0)+17,Y(0),A);
+  g+=chainH([0,M.d,...opsW('W1'),A-M.d,A],X,Y(0)+9,Y(0))+chainH([0,...ax,A],X,Y(0)+17,Y(0))+dimH(X(0),X(A),Y(0)+25,Y(0),A);
   g+=chainH([0,M.d,...opsW('W3'),A-M.d,A],X,Y(B)-9,Y(B))+dimH(X(0),X(A),Y(B)-17,Y(B),A);
-  g+=chainV([0,M.d,...opsW('W4'),B-M.d,B],Y,X(0)-9,X(0))+dimV(Y(0),Y(B),X(0)-17,X(0),B);
+  g+=chainV([0,M.d,...opsW('W4'),B-M.d,B],Y,X(0)-9,X(0))+chainV([0,...ay,B],Y,X(0)-17,X(0))+dimV(Y(0),Y(B),X(0)-25,X(0),B);
   g+=chainV([0,M.d,...opsW('W2'),B-M.d,B],Y,X(A)+11,X(A))+dimV(Y(0),Y(B),X(A)+19,X(A),B);
-  const iy=WL.filter(x=>!x.ext&&x.uy).map(x=>x.x0),ix=WL.filter(x=>!x.ext&&x.ux).map(x=>x.y0);
-  if(iy.length)g+=chainH([0,...iy,A],X,Y(0)+25,Y(0));if(ix.length)g+=chainV([0,...ix,B],Y,X(0)-25,X(0));
+  /* марки помещений: номер, название, площадь */
+  (M.rooms||[]).forEach(r=>{const cx=X(r.x),cy=Y(r.y),wmm=(r.x1-r.x0)/s,sz=wmm<22?1.8:2.2,nm=r.name.length*sz*.5>wmm-2?r.name.slice(0,Math.max(3,Math.floor((wmm-2)/(sz*.5))))+'…':r.name,ar=fmt(r.area,1);
+    g+=Ci(cx,cy-3.4,2.5,'t')+Tx(cx,cy-2.5,r.no,{size:2.4,cls:'b'})+Tx(cx,cy+1.2,nm,{size:sz})+Tx(cx,cy+4.6,ar,{size:sz,cls:'b'})+Ln(cx-ar.length*sz*.28,cy+5.3,cx+ar.length*sz*.28,cy+5.3)});
+  /* экспликация и показатели */
+  const T=tep(M),ex=25+aw+3;
+  g+=tableBlock(ex,30,EW-5,150,'Экспликация помещений',[{t:'№',w:8},{t:'Наименование',w:47,a:'start'},{t:'Пл., м²',w:16},{t:'Кат.',w:20}],
+    [...(M.rooms||[]).map(r=>[r.no,r.name,fmt(r.area,1),ROOM_KIND[r.kind]]),['','Итого',fmt(T.tot,1),''],['','в т. ч. жилая',fmt(T.liv,1),'']]);
+  [`Площадь застройки — ${fmt(T.build,1)} м²`,`Общая площадь 1 этажа — ${fmt(T.tot,1)} м²`,...(T.mans?[`Мансарда (h ≥ 1,5 м) — ${fmt(T.mans,1)} м²`]:[]),`Площади — в чистоте, по внутренним граням стен`].forEach((t,i)=>g+=Tx(ex,30+5.2+((M.rooms||[]).length+2)*4+9+i*4.2,t,{a:'start',size:2.2}));
   const om=new Map();M.ops.filter(o=>o.ok&&!/^[GK]/.test(o.wall)).forEach(o=>{if(!om.has(o.mark))om.set(o.mark,{...o,q:0});om.get(o.mark).q++});
   g+=tableBlock(25,240,200,40,'Ведомость проёмов (черновые размеры)',[{t:'Марка',w:14},{t:'Тип',w:16},{t:'Ширина × высота',w:30},{t:'Низ от пола',w:20},{t:'Кол-во',w:14}],[...om.values()].sort((a,c)=>a.mark.localeCompare(c.mark,'ru')).map(o=>[o.mark,o.type==='door'?'дверь':'окно',`${o.w} × ${o.h}`,o.sill,o.q]));
-  g+=Tx(25,286,'Стрелка — начало стены и отсчёта размеров на развёртках. Цифра в кружке — номер стены.',{a:'start',size:2.1});
-  return {code:'АР-1',title:'План стен',sub:`Наружные стены ${M.b}×${M.d}, перегородки ${M.b}×${P.partH}`,scale:s,body:g};
+  g+=Tx(25,286,'Стрелка — начало стены и отсчёта размеров на развёртках каркаса (листы КД). Номер помещения — в кружке, площадь — подчёркнута, м².',{a:'start',size:2.1});
+  return {code:'АР-1',title:'План 1 этажа',sub:`Помещений ${(M.rooms||[]).length}, общая площадь ${fmt(tep(M).tot,1)} м²`,scale:s,body:g};
 }
 function sheetWall(wl,code){
   const ms=M.mem.filter(m=>m.wall===wl.id&&m.loc);
@@ -1807,12 +1868,13 @@ function sheetGeneral(list){
   [r,y]=col(25,y,'Технология',[T.n,...(T.about?[T.about]:[]),`Пиломатериал: ${LUMBER_T[P.lumber]}`]);g+=r;
   [r,y]=col(25,y,'Район строительства и нагрузки',[P.site?`${P.site.name} (${P.site.admin}), данные ${P.site.years}, режим: ${siteKey(P)==='p50'?'1 раз в 50 лет':'средние значения'}`:'Район задан вручную',`Снег Sg = ${fmt(l.Sg,2)} кПа (${snowLbl(P)}), на кровлю S = ${fmt(l.S,2)} кПа`,`Ветер w0 = ${fmt(l.w0,3)} кПа (${windLbl(P)}), местность ${P.terrain}`,`Глубина промерзания ${P.freeze} мм, грунт: ${(SOILS[P.soil]||SOILS.loam).name}`,`Пол ${fmt(l.gF+l.pF,2)} кПа, ${M.mans?'мансарда':'чердак'} ${fmt(l.gA+l.pA,2)} кПа (нормативные)`]);g+=r;
   [r,y]=col(25,y,'Состав наружной стены (изнутри наружу)',wallLayers(P).map((t,i)=>`${i+1}. ${t}`));g+=r;
+  {const T=tep(M);[r,y]=col(25,y,'Технико-экономические показатели',[`Этажность: ${T.floors}`,`Площадь застройки: ${fmt(T.build,1)} м²`,`Общая площадь: ${fmt(T.total,1)} м² (1 этаж ${fmt(T.tot,1)}${T.mans?` + мансарда ${fmt(T.mans,1)}`:''})`,`Жилая площадь: ${fmt(T.liv,1)} м²`,`Строительный объём: ≈ ${fmt(T.vol,0)} м³ (от верха свай до конька)`]);g+=r}
   [r,y]=col(25,y,'Фундамент и перекрытия',[`${M.pileT.name}, ${M.piles.length} шт, L = ${M.pileLen} мм`,`Ростверк: ${M.pack?`пакет ${M.ply} × ${P.packB}×${P.packH} «ёлочкой», стыки над сваями`:`брус ${M.bb}×${M.hb}`}`,`Лаги ${M.bj}×${M.hj} шаг ${M.sj}, OSB пола ${P.floorOsb} мм`,`Кровля: ${M.gable?'двускатная':'односкатная'} ${M.deg}°, ${M.mat.name.toLowerCase()}, стропила ${M.br}×${M.hr} шаг ${M.sr}${M.mans?', мансарда':''}`]);g+=r;
   g+=tableBlock(230,30,180,200,'Ведомость листов',[{t:'Лист',w:12},{t:'Шифр',w:18},{t:'Наименование',w:100,a:'start'}],list.map((x,i)=>[i+1,x.code,x.title]));
   return {code:'ОД',title:'Общие данные',sub:`Технология: ${T.short}`,scale:'—',body:g};
 }
 function makeSheets(){
-  const list=[sheetPiles(),sheetGrill(),sheetPlan(),...(M.mans&&M.mansOk?[sheetMans()]:[])];let k=1;
+  const list=[sheetPlan(),...(M.mans&&M.mansOk?[sheetMans()]:[]),sheetPiles(),sheetGrill()];let k=1;
   M.walls.forEach(wl=>list.push(sheetWall(wl,'КД-'+(k++))));
   list.push(sheetRoof());
   list.unshift(sheetGeneral([{code:'ОД',title:'Общие данные'},...list]));
